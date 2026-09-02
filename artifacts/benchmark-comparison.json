@@ -1,0 +1,64 @@
+{
+  "data": "data/cache/held-out-test.jsonl",
+  "documents": 171,
+  "paired_f1_difference_from_reference": {
+    "PAW-Finetuned": {
+      "estimate": 0.0725649719132494,
+      "high": 0.10976346544041715,
+      "iterations": 5000,
+      "low": 0.0391784028012494,
+      "seed": 20260902
+    },
+    "PAW-Standard": {
+      "estimate": 0.05644818242906657,
+      "high": 0.08322065588405003,
+      "iterations": 5000,
+      "low": 0.03183267456240024,
+      "seed": 20260902
+    }
+  },
+  "systems": {
+    "PAW-Finetuned": {
+      "character": {
+        "f1": 0.8662141080237804,
+        "false_negative": 475,
+        "false_positive": 2698,
+        "precision": 0.7919814957594449,
+        "recall": 0.9558016190564809,
+        "true_positive": 10272
+      },
+      "documents": 171,
+      "documents_with_pii": 157,
+      "exact_document_accuracy": 0.38011695906432746,
+      "exact_document_matches": 65
+    },
+    "PAW-Standard": {
+      "character": {
+        "f1": 0.8823308975079632,
+        "false_negative": 1329,
+        "false_positive": 1183,
+        "precision": 0.8884067540798037,
+        "recall": 0.8763375825811854,
+        "true_positive": 9418
+      },
+      "documents": 171,
+      "documents_with_pii": 157,
+      "exact_document_accuracy": 0.29239766081871343,
+      "exact_document_matches": 50
+    },
+    "PII-Tracer": {
+      "character": {
+        "f1": 0.9387790799370298,
+        "false_negative": 13,
+        "false_positive": 1387,
+        "precision": 0.885570497483706,
+        "recall": 0.9987903601004932,
+        "true_positive": 10734
+      },
+      "documents": 171,
+      "documents_with_pii": 157,
+      "exact_document_accuracy": 0.391812865497076,
+      "exact_document_matches": 67
+    }
+  }
+}

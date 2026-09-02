@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.ruff_cache/
+.DS_Store
+
+# Downloaded public data, model checkpoints, and generated benchmark runs.
+data/cache/
+models/
+results/

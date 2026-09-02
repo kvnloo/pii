@@ -1,0 +1,60 @@
+Extract every PII field value from the input. This task follows the ai4privacy
+PII-masking definition: a value counts because it belongs to a listed field,
+even if it looks harmless or would not be sensitive by itself.
+
+Return ONLY a valid JSON array of strings. Copy every value exactly from the
+input, preserving accents, case, spaces, and punctuation inside that value.
+Return [] if none are present. Do not explain. Each array item must contain one
+value only. Never combine several fields, include a field name, include a
+colon, or copy surrounding prose. Real line breaks and the two visible
+characters backslash+n both separate fields and must not be copied into a
+value.
+
+Extract values belonging to ALL of these field types:
+- BOD or birth date; DATE; TIME.
+- BUILDING number; STREET; CITY; STATE or province; POSTCODE; COUNTRY;
+  secondary address or apartment; geographic coordinates.
+- GIVEN NAME, LAST NAME, full name, TITLE, SEX.
+- USERNAME, login, alias, handle.
+- EMAIL, telephone or fax, IP address.
+- ID card, passport, driver's license, social-security or social number.
+- Password, PIN, secret, API key, token.
+- Bank/card/account identifier or card issuer.
+
+Field labels may be English, Dutch, French, German, Italian, or Spanish, and
+may appear in JSON, XML, Markdown, tables, lists, forms, profiles, messages, or
+fragments cut from a longer record. Recognize common translated labels such as
+naam/nom/name/nome/nombre, datum/date/data/fecha, tijd/heure/Zeit/ora/hora,
+adres/adresse/indirizzo/dirección, land/pays/Land/paese/país, gebruiker or
+utilisateur or Benutzer or utente or usuario, and wachtwoord or mot de passe
+or Passwort or password or contraseña.
+
+Important benchmark rules:
+- Extract every date and time that is presented as a record value, meeting
+  time, appointment time, deadline, or background date.
+- Extract short values such as M, F, GB, NL, ENG, 13, 163, Dr, Ms, Mw, or an
+  all-capital three-letter ID when their field or record context indicates one
+  of the listed types.
+- A username can look like a name, random letters, digits, initials, or text
+  inside brackets. In a schedule like "user17 - Meeting at 9:45", both the
+  username and time are values.
+- Keep a compound address component together, but return separate address
+  fields separately when labels or delimiters separate them.
+- Do not extract organization names, universities, medical conditions,
+  ordinary topics, generic role descriptions, or unlabeled prose unless they
+  are themselves one of the listed values.
+
+Input: Hi, I'm Daniel Whitfield. Email daniels@meridiancap.com or call 415-555-0123.
+Output: ["Daniel Whitfield","daniels@meridiancap.com","415-555-0123"]
+
+Input: user17 - Meeting at 9:45 PM; kpeters88 - Meeting at 13
+Output: ["user17","9:45 PM","kpeters88","13"]
+
+Input: Tijd: 4:50\\nPostcode: 5575 XP\\nDatum: 30/10/1998\\nLand: NL
+Output: ["4:50","5575 XP","30/10/1998","NL"]
+
+Input: <Title>Mw</Title><Username>20amara</Username><Sex>F</Sex><Building>945</Building>
+Output: ["Mw","20amara","F","945"]
+
+Input: The university reviewed the application and scheduled a general discussion.
+Output: []

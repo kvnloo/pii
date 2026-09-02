@@ -1,0 +1,58 @@
+Extract all ai4privacy-style PII values from the input. Return ONLY a valid JSON
+array of exact substrings copied from the input. Return [] if there are none.
+No explanation, labels, or surrounding text. One value per array item: never
+combine multiple fields or include the colon/field name between them.
+
+The PII field types are: birth date, date, time, building number, street, city,
+state/province, postcode, country, secondary address/apartment, geographic
+coordinates, given name, surname, full name, personal title, sex, username,
+email, telephone/fax, IP address, ID card, passport, driver's license, social
+number, password/PIN/secret/token, bank/card/account ID, and card issuer.
+
+Follow the field structure, not a subjective sensitivity judgment. Extract
+short or ordinary-looking values such as M, F, GB, NL, ENG, 13, 163, Dr, Ms,
+or a three-letter ID when their context identifies a listed field. Labels may
+be English, Dutch, French, German, Italian, or Spanish. Inputs may be prose,
+JSON, XML, Markdown, YAML, forms, tables, lists, messages, or fragments. A real
+line break or visible backslash+n can separate fields.
+
+Important patterns:
+- Extract dates and times in labeled fields, schedules, appointments,
+  deadlines, or phrases like "from the date ..." in any of the six languages.
+- Usernames can be random letters/digits, dotted names, initials, bracketed
+  values, or identifiers before a colon in a participant/message list.
+- Bracketed personal values are still PII. But do not extract generic template
+  placeholders containing an underscore, such as [CURRENT_DATE],
+  [UNIVERSITY_NAME], [YOUR_NAME], or [FIELD_OF_STUDY].
+- In an address record, split every labeled component: a value like
+  "927, Calle: Shaft Road, Ciudad: Wawarsing, Estado: NY" must become
+  "927", "Shaft Road", "Wawarsing", "NY" rather than one long item.
+- When a name is followed by an ID in parentheses, separate them. Extract the
+  name only when the dataset explicitly treats it as a personal name; always
+  extract the parenthesized ID.
+- Ignore an incomplete value cut off at the very start or end of the input.
+  Do not guess, complete, or translate a value. Copy source text exactly.
+- Do not extract organization names, universities, medical conditions,
+  ordinary topics, or generic role descriptions unless explicitly one of the
+  listed personal fields.
+
+Input: Hi, I'm Daniel Whitfield. Email daniels@meridiancap.com or call 415-555-0123.
+Output: ["Daniel Whitfield","daniels@meridiancap.com","415-555-0123"]
+
+Input: - Meeting at 2:33 PM\n- N23 - Meeting at 11:29pm\n- wennmann27 - Meeting at 4:45 PM
+Output: ["2:33 PM","N23","11:29pm","wennmann27","4:45 PM"]
+
+Input: Beste deelnemers:\n- **JVT:** welkom.\n- **BYH:** bedankt.\nDatum: 2040-05-07T00:00:00
+Output: ["JVT","BYH","2040-05-07T00:00:00"]
+
+Input: Geachte [20amara]. [Minister]: welkom. Background(augustus/39)
+Output: ["20amara","Minister","augustus/39"]
+
+Input: País: US; Dirección: 927, Calle: Shaft Road, Ciudad: Wawarsing, Estado: NY, Código Postal: 12446; Nombre: Úrsula (00477097062)
+Output: ["US","927","Shaft Road","Wawarsing","NY","12446","00477097062"]
+
+Input: Date: [CURRENT_DATE]; Title: [Madame]; Born: [juin/47]; ID: [5716022019873]; School: [UNIVERSITY_NAME]
+Output: ["Madame","juin/47","5716022019873"]
+
+Input: The university reviewed the application and scheduled a general discussion.
+Output: []

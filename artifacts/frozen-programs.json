@@ -1,0 +1,26 @@
+{
+  "spec": {
+    "path": "specs/pii-detector-v3.txt",
+    "sha256": "54f0a0dc7137fc24b142daec1fc69101c41c4e3bf3ce5eb4b9abf8ba81974975",
+    "utf8_bytes": 3391
+  },
+  "standard": {
+    "adapter_bytes": 22735040,
+    "compile_seconds": 5.3156,
+    "compiler": "paw-4b-qwen3-0.6b",
+    "compiler_snapshot": "paw-4b-qwen3-0.6b-20260407",
+    "program_id": "d71e2fb30e99b0edd992"
+  },
+  "finetuned_standard": {
+    "adapter_bytes": 22735040,
+    "base_program_id": "d71e2fb30e99b0edd992",
+    "compiler": "paw-ft-bs48",
+    "compiler_snapshot": "paw-ft-bs48-20260530",
+    "program_id": "4cd2c6c58a9c0cf42fdd"
+  },
+  "shared_runtime": {
+    "bytes": 622733120,
+    "id": "qwen3-0.6b-q6_k",
+    "sha256": "9a16ed5cacba959e63b62e2b6840c3eca2b51c3c3e51d31367ef8e4aafeae33c"
+  }
+}
