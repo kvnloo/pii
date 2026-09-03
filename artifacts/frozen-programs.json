@@ -18,6 +18,17 @@
     "compiler_snapshot": "paw-ft-bs48-20260530",
     "program_id": "4cd2c6c58a9c0cf42fdd"
   },
+  "type_classifier": {
+    "spec": {
+      "path": "specs/pii-type-classifier-v2.txt",
+      "sha256": "7052f551f58acc8a4ebe5369241bef70a0952f1969ecdc37ca66331e566f3367",
+      "utf8_bytes": 3006
+    },
+    "compile_seconds": 3.4098,
+    "compiler": "paw-4b-qwen3-0.6b",
+    "compiler_snapshot": "paw-4b-qwen3-0.6b-20260407",
+    "program_id": "a2451b2cf887000e94a4"
+  },
   "shared_runtime": {
     "bytes": 622733120,
     "id": "qwen3-0.6b-q6_k",

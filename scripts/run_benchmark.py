@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Any
 
 from paw_pii.io import read_documents
-from paw_pii.metrics import diagnostic_breakdown, evaluate_documents
+from paw_pii.metrics import diagnostic_breakdown, evaluate_documents, evaluate_typed_documents
 from paw_pii.paw_backend import PawDetector
 from paw_pii.pplx_backend import PiiTracerDetector
 from paw_pii.predictions import Detector
@@ -98,12 +98,24 @@ def main() -> None:
     ordered_rows = [cached[document.id] for document in documents]
     prediction_spans = [spans_from_prediction(row) for row in ordered_rows]
     result = evaluate_documents(documents, prediction_spans)
+    typed_result = evaluate_typed_documents(documents, prediction_spans)
+    overlapping_characters = result.counts.true_positive
     inference_seconds = sum(float(row.get("elapsed_seconds", 0.0)) for row in ordered_rows)
     summary = {
         "created_at": datetime.now(UTC).isoformat(),
         "data": str(args.data),
         "backend": detector.metadata,
-        "metrics": result.to_dict(),
+        "metrics": {
+            **result.to_dict(),
+            "typed_character": typed_result.counts.to_dict(),
+            "typed_exact_document_matches": typed_result.exact_document_matches,
+            "typed_exact_document_accuracy": typed_result.exact_document_accuracy,
+            "type_accuracy_on_overlapping_characters": (
+                typed_result.counts.true_positive / overlapping_characters
+                if overlapping_characters
+                else 1.0
+            ),
+        },
         "diagnostic_breakdown": diagnostic_breakdown(documents, prediction_spans),
         "diagnostics": {
             "errors": errors,

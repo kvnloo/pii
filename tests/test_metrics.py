@@ -3,7 +3,9 @@ from paw_pii.metrics import (
     character_counts,
     diagnostic_breakdown,
     evaluate_documents,
+    evaluate_typed_documents,
     paired_bootstrap_f1_difference,
+    typed_character_counts,
 )
 from paw_pii.types import Document, Span
 
@@ -19,6 +21,43 @@ def test_character_counts_are_label_agnostic() -> None:
     assert counts.false_positive == 0
     assert counts.false_negative == 0
     assert counts.f1 == 1.0
+
+
+def test_typed_character_counts_map_gold_taxonomy() -> None:
+    text = "Email me at a@b.co today"
+    gold = [Span(12, 18, "EMAIL", "a@b.co")]
+    predicted = [Span(12, 18, "private_email", "a@b.co")]
+
+    counts = typed_character_counts(text, gold, predicted)
+
+    assert counts.true_positive == 6
+    assert counts.false_positive == 0
+    assert counts.false_negative == 0
+
+
+def test_wrong_type_is_penalized_even_when_offsets_match() -> None:
+    text = "Email me at a@b.co today"
+    gold = [Span(12, 18, "EMAIL", "a@b.co")]
+    predicted = [Span(12, 18, "private_person", "a@b.co")]
+
+    counts = typed_character_counts(text, gold, predicted)
+
+    assert counts.true_positive == 0
+    assert counts.false_positive == 6
+    assert counts.false_negative == 6
+
+
+def test_typed_evaluation_maps_address_components_to_one_type() -> None:
+    document = Document("1", "NY 12446", (Span(0, 2, "STATE"), Span(3, 8, "POSTCODE")))
+    predicted = ((
+        Span(0, 2, "private_address"),
+        Span(3, 8, "private_address"),
+    ),)
+
+    result = evaluate_typed_documents([document], predicted)
+
+    assert result.counts.f1 == 1.0
+    assert result.exact_document_accuracy == 1.0
 
 
 def test_overlapping_spans_count_each_character_once() -> None:

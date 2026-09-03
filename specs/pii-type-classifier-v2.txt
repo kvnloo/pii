@@ -1,0 +1,101 @@
+Classify the one already-detected PII value enclosed by <PII> and </PII> in
+its source context. Return exactly one label and nothing else. The only valid
+labels are private_person, private_email, private_phone, private_address,
+private_url, private_date, account_number, secret, and other_pii.
+
+Use these meanings:
+- private_person: name, surname, personal title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building number, street, city, state/province, postcode,
+  country, apartment/secondary address, or geographic coordinates.
+- private_url: private/personal URL or any IPv4/IPv6 address.
+- private_date: birth date, other personal date, or time.
+- account_number: ID card, passport, driver's license, social number, bank,
+  card, customer, order, or other account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex/gender value or PII not covered above.
+
+Use the nearby field label whenever present. Labels may be English, Dutch,
+French, German, Italian, or Spanish. A password/PIN/passcode/API-key/token is
+secret even when it is only digits. A passport/license/ID/account value is
+account_number even when it looks random or secret. A username is
+private_person. An IP address is private_url. A sex/gender value is other_pii.
+
+Input: Please email <PII>Maya Chen</PII> at maya@example.com.
+Output: private_person
+
+Input: Email: <PII>maya@example.com</PII>
+Output: private_email
+
+Input: Call <PII>+1 (416) 555-0148</PII> today.
+Output: private_phone
+
+Input: Address: <PII>927 Shaft Road</PII>, Wawarsing, NY.
+Output: private_address
+
+Input: Ciudad: <PII>Sevilla</PII>
+Output: private_address
+
+Input: IP: <PII>192.168.1.8</PII>
+Output: private_url
+
+Input: Adresse IP: <PII>8155:db8d:ec22:b258:a9f0:5524:ee3a:63e6</PII>
+Output: private_url
+
+Input: Profile URL: <PII>https://portal.example/u/maya</PII>
+Output: private_url
+
+Input: Birth date: <PII>April 12, 1990</PII>
+Output: private_date
+
+Input: Datum: <PII>2040-05-07T00:00:00</PII>
+Output: private_date
+
+Input: Passport: <PII>X1234567</PII>
+Output: account_number
+
+Input: Rijbewijs: <PII>45QFSK</PII>
+Output: account_number
+
+Input: Passnummer: <PII>Q30J2786Y</PII>, Land: Deutschland
+Output: account_number
+
+Input: order_id: <PII>AC-29418</PII>
+Output: account_number
+
+Input: Temporary PIN: <PII>4821</PII>
+Output: secret
+
+Input: PIN: <PII>4821</PII>
+Output: secret
+
+Input: Passcode: <PII>938201</PII>
+Output: secret
+
+Input: Wachtwoord: <PII>?b.6vBl</PII>
+Output: secret
+
+Input: Password: <PII>hunter2</PII>
+Output: secret
+
+Input: API token: <PII>sk-live-7XQ92</PII>
+Output: secret
+
+Input: Username: <PII>maya_c</PII>
+Output: private_person
+
+Input: Gebruikersnaam: <PII>13ritz</PII>
+Output: private_person
+
+Input: Título: <PII>Señora</PII>
+Output: private_person
+
+Input: Sex: <PII>F</PII>
+Output: other_pii
+
+Input: Geslacht: <PII>Vrouw</PII>
+Output: other_pii
+
+Input: Coordinates: <PII>[51.9, 5.2147]</PII>
+Output: private_address

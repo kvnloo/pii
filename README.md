@@ -49,21 +49,42 @@ non-PII record fields, reducing F1. That negative result is retained.
 The compact comparison artifact is in
 [`artifacts/benchmark-comparison.json`](artifacts/benchmark-comparison.json).
 
-## Try the frozen program locally
+## Try the published program locally
 
-Once the private program is available to your PAW account, inference and
-redaction happen on the local machine:
+The frozen detector is public and content-addressed. The first call downloads
+the program and shared runtime; inference then runs on the local machine:
 
 ```bash
-PYTHONPATH=src python scripts/redact.py \
-  --program-manifest results/paw-standard-v3.json \
-  --text "I'm Daniel Whitfield; email daniels@meridiancap.com" \
-  --json
+python - <<'PY'
+import programasweights as paw
+
+detect = paw.function("d71e2fb30e99b0edd992")
+print(detect("I'm Daniel Whitfield; email daniels@meridiancap.com"))
+PY
 ```
 
-The hosted compile step is required once; the downloaded 22.7 MB program and
-shared runtime then work offline. The current PAW output is untyped spans, so
-the demo uses a neutral `[PII]` replacement.
+The downloaded 22.7 MB program and shared runtime work offline. To reproduce
+the complete benchmark or compile the specification yourself, use the commands
+below.
+
+## Typed demo
+
+The best extractor stays label-agnostic because that gives the strongest PII
+recall and precision. The demo adds a second compiled PAW function that sees
+one detected span in 24 characters of nearby context and assigns one of the
+same nine categories exposed by PII-Tracer:
+`private_person`, `private_email`, `private_phone`, `private_address`,
+`private_url`, `private_date`, `account_number`, `secret`, or `other_pii`.
+Those labels power the typed highlights and replacements such as
+`[PRIVATE_EMAIL]` and `[SECRET]`. Its public content ID is
+`a2451b2cf887000e94a4`.
+
+On the frozen 171-document held-out sample, adding this stage leaves the
+extractor's 0.8823 character F1 unchanged. Among gold characters that the
+extractor found, the type was correct 80.6% of the time; typed-character F1 was
+0.7109. This is an evaluation of the optional demo typing stage, not a claim
+that its category accuracy matches PII-Tracer. The compact result is in
+[`artifacts/typed-demo-evaluation.json`](artifacts/typed-demo-evaluation.json).
 
 ## Quick start
 
@@ -112,6 +133,18 @@ PYTHONPATH=src python scripts/run_benchmark.py \
   --data data/cache/held-out-test.jsonl \
   --backend paw \
   --program-manifest results/paw-standard-v3.json
+
+PYTHONPATH=src python scripts/compile_paw.py \
+  --spec specs/pii-type-classifier-v2.txt \
+  --compiler paw-4b-qwen3-0.6b \
+  --manifest results/paw-standard-type-classifier-v2.json
+
+PYTHONPATH=src python scripts/run_typer_benchmark.py \
+  --data data/cache/held-out-test.jsonl \
+  --extraction-predictions results/held-out-test-paw-standard-v3.jsonl \
+  --type-program-manifest results/paw-standard-type-classifier-v2.json \
+  --predictions results/held-out-test-paw-standard-v3-typed-v2.jsonl \
+  --output results/held-out-test-paw-standard-v3-typed-v2.summary.json
 ```
 
 `cache_training_dev.py` reads only a few complete source groups from each raw

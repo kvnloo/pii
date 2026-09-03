@@ -1,0 +1,10 @@
+{
+  "data": "data/cache/held-out-test.jsonl",
+  "documents": 171,
+  "extraction_program": "d71e2fb30e99b0edd992",
+  "type_program": "a2451b2cf887000e94a4",
+  "extraction_character_f1": 0.8823308975079632,
+  "type_accuracy_on_overlapping_characters": 0.8061159481843279,
+  "typed_character_f1": 0.7109279895121264,
+  "note": "The headline PII comparison remains label-agnostic; this evaluates the optional demo typing stage."
+}

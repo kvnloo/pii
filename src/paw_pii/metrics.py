@@ -5,6 +5,7 @@ from collections import defaultdict
 from collections.abc import Iterable, Sequence
 from dataclasses import asdict, dataclass
 
+from .taxonomy import canonical_pii_type, require_pii_type
 from .types import Document, Span
 
 
@@ -75,6 +76,36 @@ def _character_positions(text: str, spans: Sequence[Span]) -> set[int]:
 def character_counts(text: str, gold: Sequence[Span], predicted: Sequence[Span]) -> CharacterCounts:
     gold_positions = _character_positions(text, gold)
     predicted_positions = _character_positions(text, predicted)
+    return CharacterCounts(
+        true_positive=len(gold_positions & predicted_positions),
+        false_positive=len(predicted_positions - gold_positions),
+        false_negative=len(gold_positions - predicted_positions),
+    )
+
+
+def _typed_character_positions(
+    text: str, spans: Sequence[Span], *, gold: bool
+) -> set[tuple[int, str]]:
+    positions: set[tuple[int, str]] = set()
+    for span in spans:
+        span.validate(text)
+        if gold:
+            label = require_pii_type(span.label)
+        else:
+            # Keep invalid prediction labels distinct so they cannot receive
+            # accidental credit as another category.
+            label = canonical_pii_type(span.label) or f"invalid:{span.label.strip().lower()}"
+        positions.update((position, label) for position in range(span.start, span.end))
+    return positions
+
+
+def typed_character_counts(
+    text: str, gold: Sequence[Span], predicted: Sequence[Span]
+) -> CharacterCounts:
+    """Count characters only when both their offsets and nine-way type match."""
+
+    gold_positions = _typed_character_positions(text, gold, gold=True)
+    predicted_positions = _typed_character_positions(text, predicted, gold=False)
     return CharacterCounts(
         true_positive=len(gold_positions & predicted_positions),
         false_positive=len(predicted_positions - gold_positions),
@@ -213,6 +244,45 @@ def evaluate_documents(
             raise ValueError("received fewer prediction rows than documents") from None
 
         counts = character_counts(document.text, document.spans, predicted)
+        total.add(counts)
+        document_count += 1
+        documents_with_pii += bool(document.spans)
+        exact_matches += counts.false_positive == 0 and counts.false_negative == 0
+
+    return EvaluationResult(
+        counts=total,
+        documents=document_count,
+        documents_with_pii=documents_with_pii,
+        exact_document_matches=exact_matches,
+    )
+
+
+def evaluate_typed_documents(
+    documents: Iterable[Document], predictions: Iterable[Sequence[Span]]
+) -> EvaluationResult:
+    total = CharacterCounts()
+    document_count = 0
+    documents_with_pii = 0
+    exact_matches = 0
+
+    document_iterator = iter(documents)
+    prediction_iterator = iter(predictions)
+    while True:
+        try:
+            document = next(document_iterator)
+        except StopIteration:
+            try:
+                next(prediction_iterator)
+            except StopIteration:
+                break
+            raise ValueError("received more prediction rows than documents") from None
+
+        try:
+            predicted = tuple(next(prediction_iterator))
+        except StopIteration:
+            raise ValueError("received fewer prediction rows than documents") from None
+
+        counts = typed_character_counts(document.text, document.spans, predicted)
         total.add(counts)
         document_count += 1
         documents_with_pii += bool(document.spans)
