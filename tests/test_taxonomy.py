@@ -19,6 +19,7 @@ def test_ai4privacy_labels_map_to_canonical_types() -> None:
     assert canonical_pii_type("GIVENNAME1") == "private_person"
     assert canonical_pii_type("POSTCODE") == "private_address"
     assert canonical_pii_type("PASSPORT") == "account_number"
+    assert canonical_pii_type("CARDISSUER") == "other_pii"
     assert canonical_pii_type("PASS") == "secret"
     assert canonical_pii_type("USERNAME") == "private_person"
     assert canonical_pii_type("IP") == "private_url"

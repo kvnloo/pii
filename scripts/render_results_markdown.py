@@ -49,6 +49,18 @@ def validate_spec(path: Path, text: str) -> None:
             continue
         if current.startswith(("- ", "Input:", "Output:")):
             continue
+        if "\t" in current and current.split("\t", 1)[0] in {
+            "private_person",
+            "private_email",
+            "private_phone",
+            "private_address",
+            "private_url",
+            "private_date",
+            "account_number",
+            "secret",
+            "other_pii",
+        }:
+            continue
         raise ValueError(f"{path}:{index + 1}: adjacent prose lines look like a soft wrap")
 
 
@@ -134,6 +146,7 @@ def headline_sections() -> list[str]:
     benchmark_path = ROOT / "artifacts" / "benchmark-comparison.json"
     optimization_path = ROOT / "artifacts" / "train500-optimization.json"
     finetune_path = ROOT / "artifacts" / "finetune-optimization.json"
+    fresh_path = ROOT / "artifacts" / "typed-compact-search-v2.json"
     if benchmark_path.exists():
         benchmark = read_json(benchmark_path)
         systems = benchmark["systems"]
@@ -324,6 +337,160 @@ def headline_sections() -> list[str]:
                 f"job `{failure['job_id']}`: {failure['error']}."
             )
         lines.append("")
+    if fresh_path.exists():
+        fresh = read_json(fresh_path)
+        search = fresh["search"]
+        selection = fresh["selection"]
+        winner = fresh["winner"]
+        sealed = fresh["sealed_test"]
+        legacy = fresh["historical_development_compatibility"]
+        search_differences = search["paired_differences_from_baseline"]
+        selection_differences = selection["paired_differences_from_baseline"]
+        lines.extend(
+            [
+                "## Fresh group-disjoint compact-spec and output-format search",
+                "",
+                (
+                    f"The search set contains {integer(search['documents'])} documents, the "
+                    f"selection set contains {integer(selection['documents'])}, and the sealed "
+                    f"test contains {integer(sealed['documents'])}. Complete source groups are "
+                    "pairwise disjoint and exclude the historical development groups. Candidate "
+                    "editing used only search; the candidate set was then frozen for selection, "
+                    "and only the selection winner was opened on sealed test."
+                ),
+                "",
+                "### Search-set candidates",
+                "",
+                (
+                    "| Candidate | Spec characters | Output shape | Program | Extract P | "
+                    "Extract R | Extract F1 | Typed P | Typed R | Typed F1 | Errors |"
+                ),
+                "| --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for candidate in search["candidates"]:
+            extraction = candidate["extraction"]
+            typed = candidate["typed"]
+            diagnostics = candidate["diagnostics"]
+            lines.append(
+                f"| {candidate['name']} | {integer(candidate['spec_characters'])} | "
+                f"{candidate['output_shape']} | `{candidate['program_id']}` | "
+                f"{decimal(extraction['precision'])} | {decimal(extraction['recall'])} | "
+                f"{decimal(extraction['f1'])} | {decimal(typed['precision'])} | "
+                f"{decimal(typed['recall'])} | {decimal(typed['f1'])} | "
+                f"{integer(diagnostics['errors'])} |"
+            )
+        compact_search = search_differences["compact-three-example-text-first"]
+        restraint_search = search_differences["compact-restraint-v2"]
+        lines.extend(
+            [
+                "",
+                (
+                    "Compact text-first JSON tied the baseline on search: its typed-F1 change was "
+                    f"{decimal(compact_search['typed_f1']['estimate'])} with a 95% "
+                    "paired-bootstrap "
+                    f"interval [{decimal(compact_search['typed_f1']['ci95_low'])}, "
+                    f"{decimal(compact_search['typed_f1']['ci95_high'])}]. The targeted restraint "
+                    "variant also tied on typed F1 while appearing to improve extraction, but its "
+                    "extraction interval "
+                    f"[{decimal(restraint_search['extraction_f1']['ci95_low'])}, "
+                    f"{decimal(restraint_search['extraction_f1']['ci95_high'])}] still included "
+                    "zero."
+                ),
+                "",
+                (
+                    "Among alternate encodings, text-first compact JSON was clearly strongest. "
+                    "Reversing the pair order, using TSV, and using verbose JSON objects reduced "
+                    "typed F1 to 0.8079, 0.7975, and 0.8271 respectively. Zero-example JSON "
+                    "reached "
+                    "0.8395, indicating that a few examples materially help the small interpreter."
+                ),
+                "",
+                "### Independent selection",
+                "",
+                (
+                    "| Finalist | Program | Extract P | Extract R | Extract F1 | Typed P | "
+                    "Typed R | Typed F1 | Errors |"
+                ),
+                "| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |",
+            ]
+        )
+        for finalist in selection["finalists"]:
+            extraction = finalist["extraction"]
+            typed = finalist["typed"]
+            diagnostics = finalist["diagnostics"]
+            lines.append(
+                f"| {finalist['name']} | `{finalist['program_id']}` | "
+                f"{decimal(extraction['precision'])} | {decimal(extraction['recall'])} | "
+                f"{decimal(extraction['f1'])} | {decimal(typed['precision'])} | "
+                f"{decimal(typed['recall'])} | {decimal(typed['f1'])} | "
+                f"{integer(diagnostics['errors'])} |"
+            )
+        compact_selection = selection_differences["compact-three-example-text-first"]
+        restraint_selection = selection_differences["compact-restraint-v2"]
+        lines.extend(
+            [
+                "",
+                (
+                    "The search-set tie did not generalize. Compact text-first JSON lost "
+                    f"{decimal(abs(compact_selection['extraction_f1']['estimate']))} extraction F1 "
+                    "versus baseline; its 95% interval "
+                    f"[{decimal(compact_selection['extraction_f1']['ci95_low'])}, "
+                    f"{decimal(compact_selection['extraction_f1']['ci95_high'])}] excludes zero. "
+                    "Its typed-F1 difference remained uncertain."
+                ),
+                "",
+                (
+                    "The targeted restraint variant overfit more strongly, losing "
+                    f"{decimal(abs(restraint_selection['extraction_f1']['estimate']))} extraction "
+                    f"F1 and {decimal(abs(restraint_selection['typed_f1']['estimate']))} typed F1. "
+                    "Both paired-bootstrap intervals exclude zero."
+                ),
+                "",
+                (
+                    f"Winner: `{winner['program_id']}` using `{winner['spec_path']}`. "
+                    f"{winner['reason']}"
+                ),
+                "",
+                "### Sealed result",
+                "",
+                (
+                    f"The frozen winner scored extraction F1 {decimal(sealed['extraction']['f1'])} "
+                    f"(precision {decimal(sealed['extraction']['precision'])}, recall "
+                    f"{decimal(sealed['extraction']['recall'])}) and typed F1 "
+                    f"{decimal(sealed['typed']['f1'])} (precision "
+                    f"{decimal(sealed['typed']['precision'])}, recall "
+                    f"{decimal(sealed['typed']['recall'])}) on the untouched "
+                    f"{integer(sealed['documents'])}-document sealed set. Type accuracy on "
+                    "overlapping characters was "
+                    f"{decimal(sealed['type_accuracy_on_overlapping_characters'])}; inference "
+                    f"errors were {integer(sealed['diagnostics']['errors'])}."
+                ),
+                "",
+                "### Decision",
+                "",
+                fresh["recommendation"]["summary"],
+                "",
+            ]
+        )
+        for finding in fresh["recommendation"]["findings"]:
+            lines.append(f"- {finding}")
+        legacy_systems = {system["name"]: system for system in legacy["systems"]}
+        lines.extend(
+            [
+                "",
+                (
+                    "A post-selection compatibility check on the historical development set "
+                    "agreed: baseline typed F1 was "
+                    f"{decimal(legacy_systems['published-baseline']['typed_f1'])}, versus "
+                    f"{decimal(legacy_systems['compact-three-example-text-first']['typed_f1'])} "
+                    "for compact-three and "
+                    f"{decimal(legacy_systems['compact-restraint-v2']['typed_f1'])} for "
+                    "compact-restraint-v2. These runs did not affect selection."
+                ),
+                "",
+            ]
+        )
     return lines
 
 
@@ -368,19 +535,27 @@ def main() -> None:
         "## Protocol",
         "",
         (
-            "- Specification development uses only "
+            "- The historical specification search used "
             "`data/cache/train-development-500.jsonl`: 477 documents, 200,901 "
             "characters, and 3,363 annotated spans selected from complete AI4Privacy "
             "training groups."
         ),
         (
-            "- Final evaluation uses `data/cache/held-out-test.jsonl`: 171 documents, "
+            "- Its historical final evaluation used `data/cache/held-out-test.jsonl`: "
+            "171 documents, "
             "72,069 characters, and 1,073 spans selected from the AI4Privacy "
             "validation split."
         ),
         (
-            "- The held-out sample is opened only after a winner is frozen; no later "
-            "specification tuning uses it."
+            "- The new compact-spec and output-format search uses fresh, complete, "
+            "group-disjoint AI4Privacy training groups: 497 search documents, 522 "
+            "selection documents, and 512 sealed-test documents. All three splits "
+            "exclude the historical development groups."
+        ),
+        (
+            "- Candidate editing used only the fresh search split. The candidate set "
+            "was frozen before selection; the winner was frozen before the sealed "
+            "test was opened; only that winner was evaluated on sealed test."
         ),
         (
             "- Files ending in `-reparsed.summary.json` rescore the same cached raw "

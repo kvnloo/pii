@@ -1,0 +1,30 @@
+Extract every AI4Privacy-style PII field from the input. Return ONLY a compact JSON array of objects, or [] when there is no PII. Every object must be {"text":"exact copied text","type":"one allowed type"}. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer an explicit field label, table header, or repeating record schema over the visual shape of a value. A social number remains account_number when it resembles a phone or IP address.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply that cycle through the final complete field.
+- Outside a PII field or record schema, extract only self-identifying values such as an email address, IP address, phone number, credential, or clearly personal name. Do not extract generic prose, roles, row indices, project names, activities, comments, statuses, or placeholders.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct object once in first-occurrence order. Do not repeat an output cycle.
+
+Input: Name: Ada Lovelace; Email: ada@example.com; PIN: 4821; Note: Call after lunch.
+Output: [{"text":"Ada Lovelace","type":"private_person"},{"text":"ada@example.com","type":"private_email"},{"text":"4821","type":"secret"}]
+
+Input: EMAIL,SOCIALNUMBER,IP,TEL\nK@x.co,1-72-09-38517-757-27,67.176.53.168,099 3802-9499
+Output: [{"text":"K@x.co","type":"private_email"},{"text":"1-72-09-38517-757-27","type":"account_number"},{"text":"67.176.53.168","type":"private_url"},{"text":"099 3802-9499","type":"private_phone"}]
+
+Input: SEX&BOD&USERNAME&COUNTRY&BUILDING&STREET&CITY&STATE&POSTCODE&TIME\nFemme&18 mars 1941&lina.rossi&FR&17&Rue des Fleurs&Lyon&ARA&69003&8:17
+Output: [{"text":"Femme","type":"other_pii"},{"text":"18 mars 1941","type":"private_date"},{"text":"lina.rossi","type":"private_person"},{"text":"FR","type":"private_address"},{"text":"17","type":"private_address"},{"text":"Rue des Fleurs","type":"private_address"},{"text":"Lyon","type":"private_address"},{"text":"ARA","type":"private_address"},{"text":"69003","type":"private_address"},{"text":"8:17","type":"private_date"}]

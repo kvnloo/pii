@@ -1,0 +1,415 @@
+{
+  "experiment": "Single-program typed PII compact-spec and output-format search",
+  "date": "2026-09-03",
+  "compiler": {
+    "name": "paw-ft-bs48",
+    "snapshot": "paw-ft-bs48-20260530",
+    "kind": "finetune_lora"
+  },
+  "runtime": "qwen3-0.6b-q6_k",
+  "split_manifest": "artifacts/fresh-group-splits-v2.json",
+  "protocol": [
+    "All new programs were compiled with public=true.",
+    "All specifications were stored as authored, without editor-inserted line-wrapping newlines.",
+    "Fresh search, selection, and sealed-test sets use complete source groups from the pinned AI4Privacy training revision, are pairwise group-disjoint, and exclude every group in the historical 477-document development set.",
+    "Candidate formats and specifications were developed only against the 497-document search set.",
+    "The candidate set was frozen before the 522-document selection run. The published baseline won selection and was frozen before the sealed test was opened.",
+    "Only the frozen winner was run on the 512-document sealed test. Later scoring-only support for the previously unseen CARDISSUER source label maps the issuer name to the catch-all other_pii category; no model output or specification changed."
+  ],
+  "search": {
+    "data": "data/cache/fresh-search-v2.jsonl",
+    "documents": 497,
+    "characters": 209549,
+    "annotated_spans": 3145,
+    "jsonl_sha256": "8333ce6d45d348f087ead3d625bdc3a55c79e49ed06939b60a8946e682de175c",
+    "candidates": [
+      {
+        "name": "published-baseline",
+        "description": "Original targeted specification with compact JSON [text,type] pairs",
+        "spec_path": "specs/pii-detector-typed-ft-v1.txt",
+        "spec_characters": 8209,
+        "output_shape": "JSON [text,type] pairs",
+        "program_id": "73a0e38b8bbe3427cd1d",
+        "public": true,
+        "summary_path": "results/fresh-search-v2-paw-finetuned-typed-ft-v1-baseline.summary.json",
+        "extraction": {
+          "precision": 0.8911867547293865,
+          "recall": 0.9168332052267486,
+          "f1": 0.903828084745249
+        },
+        "typed": {
+          "precision": 0.8294011958410651,
+          "recall": 0.8657647963105304,
+          "f1": 0.847192971899633
+        },
+        "type_accuracy_on_overlapping_characters": 0.944299128101945,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 4,
+          "unmatched_values": 16
+        }
+      },
+      {
+        "name": "compact-zero-example",
+        "description": "Compact specification with no examples",
+        "spec_path": "specs/pii-detector-typed-compact-zero-v1.txt",
+        "spec_characters": 2234,
+        "output_shape": "JSON [text,type] pairs",
+        "program_id": "af7dc8a9606e3c3a7c6b",
+        "public": true,
+        "summary_path": "results/fresh-search-v2-paw-finetuned-typed-compact-zero-v1.summary.json",
+        "extraction": {
+          "precision": 0.8634757738896366,
+          "recall": 0.9468101460415065,
+          "f1": 0.9032248603147134
+        },
+        "typed": {
+          "precision": 0.7983803871540296,
+          "recall": 0.8851037663335896,
+          "f1": 0.8395083329688116
+        },
+        "type_accuracy_on_overlapping_characters": 0.9348270823185582,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 5,
+          "unmatched_values": 75
+        }
+      },
+      {
+        "name": "compact-three-example-text-first",
+        "description": "Compact specification with three examples",
+        "spec_path": "specs/pii-detector-typed-compact-three-text-type-v1.txt",
+        "spec_characters": 3089,
+        "output_shape": "JSON [text,type] pairs",
+        "program_id": "a6f44175f8750d57e148",
+        "public": true,
+        "summary_path": "results/fresh-search-v2-paw-finetuned-typed-compact-three-text-type-v1.summary.json",
+        "extraction": {
+          "precision": 0.8691093541896908,
+          "recall": 0.9429669485011529,
+          "f1": 0.9045329872887604
+        },
+        "typed": {
+          "precision": 0.8096065463513059,
+          "recall": 0.8882398155265181,
+          "f1": 0.8471022885542964
+        },
+        "type_accuracy_on_overlapping_characters": 0.9419628301271601,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 6,
+          "unmatched_values": 24
+        }
+      },
+      {
+        "name": "compact-three-example-type-first",
+        "description": "Reversed pair order",
+        "spec_path": "specs/pii-detector-typed-compact-three-type-text-v1.txt",
+        "spec_characters": 3089,
+        "output_shape": "JSON [type,text] pairs",
+        "program_id": "021a90c2c6cd7b103909",
+        "public": true,
+        "summary_path": "results/fresh-search-v2-paw-finetuned-typed-compact-three-type-text-v1.summary.json",
+        "extraction": {
+          "precision": 0.8588545207341944,
+          "recall": 0.9322367409684857,
+          "f1": 0.8940423712571319
+        },
+        "typed": {
+          "precision": 0.7706025172327184,
+          "recall": 0.848977709454266,
+          "f1": 0.8078937359197168
+        },
+        "type_accuracy_on_overlapping_characters": 0.9106889614458626,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 8,
+          "unmatched_values": 24
+        }
+      },
+      {
+        "name": "compact-three-example-tsv",
+        "description": "One type and exact text pair per tab-separated line",
+        "spec_path": "specs/pii-detector-typed-compact-three-tsv-v1.txt",
+        "spec_characters": 3002,
+        "output_shape": "TSV type then text",
+        "program_id": "f8c67de4cd93553cd38f",
+        "public": true,
+        "summary_path": "results/fresh-search-v2-paw-finetuned-typed-compact-three-tsv-v1.summary.json",
+        "extraction": {
+          "precision": 0.8167423230974633,
+          "recall": 0.9404150653343581,
+          "f1": 0.874226509467667
+        },
+        "typed": {
+          "precision": 0.7403281451634142,
+          "recall": 0.8642890084550345,
+          "f1": 0.7975204266908761
+        },
+        "type_accuracy_on_overlapping_characters": 0.9190505770425345,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 0,
+          "unmatched_values": 48
+        }
+      },
+      {
+        "name": "compact-three-example-objects",
+        "description": "Verbose JSON objects instead of pairs",
+        "spec_path": "specs/pii-detector-typed-compact-three-objects-v1.txt",
+        "spec_characters": 3350,
+        "output_shape": "JSON objects with text and type",
+        "program_id": "75af38369b880b3b680b",
+        "public": true,
+        "summary_path": "results/fresh-search-v2-paw-finetuned-typed-compact-three-objects-v1.summary.json",
+        "extraction": {
+          "precision": 0.8610930659511369,
+          "recall": 0.9373405073020753,
+          "f1": 0.8976004710731635
+        },
+        "typed": {
+          "precision": 0.7890666443309043,
+          "recall": 0.8689315910837817,
+          "f1": 0.8270755904129232
+        },
+        "type_accuracy_on_overlapping_characters": 0.9270180732771345,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 3,
+          "unmatched_values": 21
+        }
+      },
+      {
+        "name": "compact-restraint-v2",
+        "description": "Five examples plus targeted negative, name, and credential restraint",
+        "spec_path": "specs/pii-detector-typed-compact-restraint-v2.txt",
+        "spec_characters": 3907,
+        "output_shape": "JSON [text,type] pairs",
+        "program_id": "84e670f39693f2f67a65",
+        "public": true,
+        "summary_path": "results/fresh-search-v2-paw-finetuned-typed-compact-restraint-v2.summary.json",
+        "extraction": {
+          "precision": 0.8758661819834147,
+          "recall": 0.9482244427363566,
+          "f1": 0.9106101539778849
+        },
+        "typed": {
+          "precision": 0.8108685267919863,
+          "recall": 0.8872559569561875,
+          "f1": 0.8473441583228116
+        },
+        "type_accuracy_on_overlapping_characters": 0.935702473979443,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 3,
+          "unmatched_values": 19
+        }
+      }
+    ],
+    "paired_differences_from_baseline": {
+      "compact-three-example-text-first": {
+        "extraction_f1": {
+          "estimate": 0.0007049025435114098,
+          "ci95_low": -0.01596057621823499,
+          "ci95_high": 0.0170501846193728
+        },
+        "typed_f1": {
+          "estimate": -0.00009068334533668398,
+          "ci95_low": -0.023515075568363186,
+          "ci95_high": 0.02290800109864577
+        }
+      },
+      "compact-restraint-v2": {
+        "extraction_f1": {
+          "estimate": 0.006782069232635912,
+          "ci95_low": -0.007199459532601482,
+          "ci95_high": 0.02150346003459025
+        },
+        "typed_f1": {
+          "estimate": 0.00015118642317857311,
+          "ci95_low": -0.02139108188163552,
+          "ci95_high": 0.021938906575779238
+        }
+      },
+      "bootstrap": {
+        "iterations": 5000,
+        "seed": 20260902
+      }
+    }
+  },
+  "selection": {
+    "data": "data/cache/fresh-selection-v2.jsonl",
+    "documents": 522,
+    "characters": 221166,
+    "annotated_spans": 3248,
+    "jsonl_sha256": "fc48aa9a2839f63f4e06ba01b6fff80655c7649bc14a4d4b8b199c70364f8ff7",
+    "finalists": [
+      {
+        "name": "published-baseline",
+        "program_id": "73a0e38b8bbe3427cd1d",
+        "summary_path": "results/fresh-selection-v2-paw-finetuned-typed-ft-v1-baseline.summary.json",
+        "extraction": {
+          "precision": 0.889154658421329,
+          "recall": 0.920294668196365,
+          "f1": 0.9044567088006646
+        },
+        "typed": {
+          "precision": 0.8163023363405043,
+          "recall": 0.8488483973780745,
+          "f1": 0.8322573037351493
+        },
+        "type_accuracy_on_overlapping_characters": 0.9261531395577718,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 8,
+          "unmatched_values": 31
+        }
+      },
+      {
+        "name": "compact-three-example-text-first",
+        "program_id": "a6f44175f8750d57e148",
+        "summary_path": "results/fresh-selection-v2-paw-finetuned-typed-compact-three-text-type-v1.summary.json",
+        "extraction": {
+          "precision": 0.8431351292752994,
+          "recall": 0.9392548759132903,
+          "f1": 0.8886032562125107
+        },
+        "typed": {
+          "precision": 0.7848309308904755,
+          "recall": 0.8758494196884961,
+          "f1": 0.8278459068108508
+        },
+        "type_accuracy_on_overlapping_characters": 0.9363227258116361,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 3,
+          "unmatched_values": 21
+        }
+      },
+      {
+        "name": "compact-restraint-v2",
+        "program_id": "84e670f39693f2f67a65",
+        "summary_path": "results/fresh-selection-v2-paw-finetuned-typed-compact-restraint-v2.summary.json",
+        "extraction": {
+          "precision": 0.8369247576130001,
+          "recall": 0.9251856771934062,
+          "f1": 0.8788448026155412
+        },
+        "typed": {
+          "precision": 0.7536569509155921,
+          "recall": 0.8365506043658668,
+          "f1": 0.7929432553367344
+        },
+        "type_accuracy_on_overlapping_characters": 0.9079101944915807,
+        "diagnostics": {
+          "errors": 0,
+          "malformed_outputs": 6,
+          "unmatched_values": 20
+        }
+      }
+    ],
+    "paired_differences_from_baseline": {
+      "compact-three-example-text-first": {
+        "extraction_f1": {
+          "estimate": -0.01585345258815396,
+          "ci95_low": -0.03163769625312074,
+          "ci95_high": -0.0006123605420363942
+        },
+        "typed_f1": {
+          "estimate": -0.004411396924298483,
+          "ci95_low": -0.029457270224314325,
+          "ci95_high": 0.023040872779970023
+        }
+      },
+      "compact-restraint-v2": {
+        "extraction_f1": {
+          "estimate": -0.025611906185123434,
+          "ci95_low": -0.04044017668968469,
+          "ci95_high": -0.010845800202203826
+        },
+        "typed_f1": {
+          "estimate": -0.0393140483984149,
+          "ci95_low": -0.0628625430147014,
+          "ci95_high": -0.01137087336017939
+        }
+      },
+      "bootstrap": {
+        "iterations": 5000,
+        "seed": 20260902
+      }
+    }
+  },
+  "winner": {
+    "name": "published-baseline",
+    "program_id": "73a0e38b8bbe3427cd1d",
+    "spec_path": "specs/pii-detector-typed-ft-v1.txt",
+    "manifest_path": "results/paw-finetuned-typed-ft-v1-public.json",
+    "public": true,
+    "reason": "It had the strongest extraction and typed F1 on the independent selection set. The compact three-example candidate had statistically worse extraction, while compact-restraint-v2 had statistically worse extraction and typed F1. Specification length does not complicate the public one-program inference interface because compilation happens once."
+  },
+  "sealed_test": {
+    "data": "data/cache/fresh-sealed-test-v2.jsonl",
+    "documents": 512,
+    "characters": 217885,
+    "annotated_spans": 3391,
+    "jsonl_sha256": "65eb8416194a4a1acae187715aa1dd8ceda9662eec6538eb0a14be330eb5ba39",
+    "program_id": "73a0e38b8bbe3427cd1d",
+    "summary_path": "results/fresh-sealed-test-v2-paw-finetuned-typed-ft-v1-final.summary.json",
+    "extraction": {
+      "precision": 0.9004791431792559,
+      "recall": 0.9166523211109199,
+      "f1": 0.9084937583530014
+    },
+    "typed": {
+      "precision": 0.8383798882681565,
+      "recall": 0.8545884228808974,
+      "f1": 0.8464065650512542
+    },
+    "type_accuracy_on_overlapping_characters": 0.9394347240915208,
+    "diagnostics": {
+      "errors": 0,
+      "malformed_outputs": 3,
+      "unmatched_values": 27
+    }
+  },
+  "historical_development_compatibility": {
+    "data": "data/cache/train-development-500.jsonl",
+    "documents": 477,
+    "note": "These post-selection compatibility runs did not affect model selection.",
+    "systems": [
+      {
+        "name": "published-baseline",
+        "program_id": "73a0e38b8bbe3427cd1d",
+        "summary_path": "results/train-development-500-paw-finetuned-typed-ft-v1-live.summary.json",
+        "extraction_f1": 0.9061444379732091,
+        "typed_f1": 0.8220626140345797
+      },
+      {
+        "name": "compact-three-example-text-first",
+        "program_id": "a6f44175f8750d57e148",
+        "summary_path": "results/train-development-500-paw-finetuned-typed-compact-three-text-type-v1.summary.json",
+        "extraction_f1": 0.8780702236386615,
+        "typed_f1": 0.793949919997812
+      },
+      {
+        "name": "compact-restraint-v2",
+        "program_id": "84e670f39693f2f67a65",
+        "summary_path": "results/train-development-500-paw-finetuned-typed-compact-restraint-v2.summary.json",
+        "extraction_f1": 0.8792080321736929,
+        "typed_f1": 0.7872736172295645
+      }
+    ]
+  },
+  "recommendation": {
+    "program_id": "73a0e38b8bbe3427cd1d",
+    "output_shape": "JSON [text,type] pairs",
+    "summary": "Keep the existing public one-pass typed program. Compact text-first JSON pairs are the best alternative shape, but simplifying the specification did not generalize. Do not switch to zero-shot, reversed pairs, TSV, or JSON objects based on these results.",
+    "findings": [
+      "JSON is already the right family, but compact pairs outperform verbose objects and text-first order strongly outperforms type-first order.",
+      "Three examples recover most of the zero-example loss, so examples are useful even for the 0.6B interpreter.",
+      "TSV eliminated malformed outputs but still produced far worse F1, showing that syntactic validity was not the main bottleneck.",
+      "The compact candidates traded precision for recall. Their apparent search-set gains did not survive independent selection, especially for the targeted restraint variant.",
+      "The long specification remains worthwhile for accuracy because users call only the compiled program ID; its length does not make the README or inference interface more complex."
+    ]
+  }
+}

@@ -33,6 +33,59 @@ def test_parse_compact_typed_pairs() -> None:
     ]
 
 
+def test_parse_compact_label_first_pairs() -> None:
+    source = "Maya: maya@example.com"
+    result = parse_paw_output(
+        source,
+        '[["private_person","Maya"],["private_email","maya@example.com"]]',
+        output_format="json_type_text",
+    )
+
+    assert not result.malformed
+    assert [(span.value, span.label) for span in result.spans] == [
+        ("Maya", "private_person"),
+        ("maya@example.com", "private_email"),
+    ]
+
+
+def test_parse_label_first_tsv_without_stripping_values() -> None:
+    source = "Name:  Maya \nEmail: maya@example.com"
+    result = parse_paw_output(
+        source,
+        "private_person\t Maya \nprivate_email\tmaya@example.com",
+        output_format="tsv_type_text",
+    )
+
+    assert not result.malformed
+    assert [(span.value, span.label) for span in result.spans] == [
+        (" Maya ", "private_person"),
+        ("maya@example.com", "private_email"),
+    ]
+
+
+def test_parse_label_first_tsv_none_and_malformed_line() -> None:
+    assert parse_paw_output("No PII", "NONE", output_format="tsv_type_text").spans == ()
+
+    result = parse_paw_output(
+        "Alice",
+        "private_person\tAlice\nnot a row",
+        output_format="tsv_type_text",
+    )
+    assert result.malformed
+    assert [span.value for span in result.spans] == ["Alice"]
+
+
+def test_parse_label_first_tsv_preserves_final_value_spaces() -> None:
+    result = parse_paw_output(
+        "Name: Alice ",
+        "private_person\tAlice ",
+        output_format="tsv_type_text",
+    )
+
+    assert not result.malformed
+    assert [span.value for span in result.spans] == ["Alice "]
+
+
 def test_hallucinated_values_do_not_become_spans() -> None:
     result = parse_paw_output("Alice", '[{"text":"Bob","type":"private_person"}]')
 

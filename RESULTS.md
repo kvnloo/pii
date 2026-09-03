@@ -1,14 +1,15 @@
 # PAW PII experiment log
 
-Generated at 2026-09-03T14:21:22.868907+00:00 by `scripts/render_results_markdown.py`.
+Generated at 2026-09-03T16:29:51.257008+00:00 by `scripts/render_results_markdown.py`.
 
 This file records every benchmark summary currently present under `results/` and embeds every current specification verbatim. The renderer rejects CR characters, trailing whitespace, and adjacent prose lines that look like editor-inserted soft wrapping.
 
 ## Protocol
 
-- Specification development uses only `data/cache/train-development-500.jsonl`: 477 documents, 200,901 characters, and 3,363 annotated spans selected from complete AI4Privacy training groups.
-- Final evaluation uses `data/cache/held-out-test.jsonl`: 171 documents, 72,069 characters, and 1,073 spans selected from the AI4Privacy validation split.
-- The held-out sample is opened only after a winner is frozen; no later specification tuning uses it.
+- The historical specification search used `data/cache/train-development-500.jsonl`: 477 documents, 200,901 characters, and 3,363 annotated spans selected from complete AI4Privacy training groups.
+- Its historical final evaluation used `data/cache/held-out-test.jsonl`: 171 documents, 72,069 characters, and 1,073 spans selected from the AI4Privacy validation split.
+- The new compact-spec and output-format search uses fresh, complete, group-disjoint AI4Privacy training groups: 497 search documents, 522 selection documents, and 512 sealed-test documents. All three splits exclude the historical development groups.
+- Candidate editing used only the fresh search split. The candidate set was frozen before selection; the winner was frozen before the sealed test was opened; only that winner was evaluated on sealed test.
 - Files ending in `-reparsed.summary.json` rescore the same cached raw outputs after parser improvements; they do not make additional inference calls.
 - Extraction scores are micro-averaged character precision, recall, and F1. Typed F1 requires both character coverage and the canonical nine-way type to match.
 - All new compiles are public.
@@ -94,6 +95,56 @@ Frozen winner `73a0e38b8bbe3427cd1d`: held-out extraction F1 0.8830, typed F1 0.
 
 - `specs/pii-detector-typed-ft-v2.txt` (14524 characters), job `bb48be04465c40f489db67d2af67b01c`: HTTP 422 Unprocessable Entity from the finetune compile provider; no program was produced.
 
+## Fresh group-disjoint compact-spec and output-format search
+
+The search set contains 497 documents, the selection set contains 522, and the sealed test contains 512. Complete source groups are pairwise disjoint and exclude the historical development groups. Candidate editing used only search; the candidate set was then frozen for selection, and only the selection winner was opened on sealed test.
+
+### Search-set candidates
+
+| Candidate | Spec characters | Output shape | Program | Extract P | Extract R | Extract F1 | Typed P | Typed R | Typed F1 | Errors |
+| --- | ---: | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| published-baseline | 8209 | JSON [text,type] pairs | `73a0e38b8bbe3427cd1d` | 0.8912 | 0.9168 | 0.9038 | 0.8294 | 0.8658 | 0.8472 | 0 |
+| compact-zero-example | 2234 | JSON [text,type] pairs | `af7dc8a9606e3c3a7c6b` | 0.8635 | 0.9468 | 0.9032 | 0.7984 | 0.8851 | 0.8395 | 0 |
+| compact-three-example-text-first | 3089 | JSON [text,type] pairs | `a6f44175f8750d57e148` | 0.8691 | 0.9430 | 0.9045 | 0.8096 | 0.8882 | 0.8471 | 0 |
+| compact-three-example-type-first | 3089 | JSON [type,text] pairs | `021a90c2c6cd7b103909` | 0.8589 | 0.9322 | 0.8940 | 0.7706 | 0.8490 | 0.8079 | 0 |
+| compact-three-example-tsv | 3002 | TSV type then text | `f8c67de4cd93553cd38f` | 0.8167 | 0.9404 | 0.8742 | 0.7403 | 0.8643 | 0.7975 | 0 |
+| compact-three-example-objects | 3350 | JSON objects with text and type | `75af38369b880b3b680b` | 0.8611 | 0.9373 | 0.8976 | 0.7891 | 0.8689 | 0.8271 | 0 |
+| compact-restraint-v2 | 3907 | JSON [text,type] pairs | `84e670f39693f2f67a65` | 0.8759 | 0.9482 | 0.9106 | 0.8109 | 0.8873 | 0.8473 | 0 |
+
+Compact text-first JSON tied the baseline on search: its typed-F1 change was -0.0001 with a 95% paired-bootstrap interval [-0.0235, 0.0229]. The targeted restraint variant also tied on typed F1 while appearing to improve extraction, but its extraction interval [-0.0072, 0.0215] still included zero.
+
+Among alternate encodings, text-first compact JSON was clearly strongest. Reversing the pair order, using TSV, and using verbose JSON objects reduced typed F1 to 0.8079, 0.7975, and 0.8271 respectively. Zero-example JSON reached 0.8395, indicating that a few examples materially help the small interpreter.
+
+### Independent selection
+
+| Finalist | Program | Extract P | Extract R | Extract F1 | Typed P | Typed R | Typed F1 | Errors |
+| --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| published-baseline | `73a0e38b8bbe3427cd1d` | 0.8892 | 0.9203 | 0.9045 | 0.8163 | 0.8488 | 0.8323 | 0 |
+| compact-three-example-text-first | `a6f44175f8750d57e148` | 0.8431 | 0.9393 | 0.8886 | 0.7848 | 0.8758 | 0.8278 | 0 |
+| compact-restraint-v2 | `84e670f39693f2f67a65` | 0.8369 | 0.9252 | 0.8788 | 0.7537 | 0.8366 | 0.7929 | 0 |
+
+The search-set tie did not generalize. Compact text-first JSON lost 0.0159 extraction F1 versus baseline; its 95% interval [-0.0316, -0.0006] excludes zero. Its typed-F1 difference remained uncertain.
+
+The targeted restraint variant overfit more strongly, losing 0.0256 extraction F1 and 0.0393 typed F1. Both paired-bootstrap intervals exclude zero.
+
+Winner: `73a0e38b8bbe3427cd1d` using `specs/pii-detector-typed-ft-v1.txt`. It had the strongest extraction and typed F1 on the independent selection set. The compact three-example candidate had statistically worse extraction, while compact-restraint-v2 had statistically worse extraction and typed F1. Specification length does not complicate the public one-program inference interface because compilation happens once.
+
+### Sealed result
+
+The frozen winner scored extraction F1 0.9085 (precision 0.9005, recall 0.9167) and typed F1 0.8464 (precision 0.8384, recall 0.8546) on the untouched 512-document sealed set. Type accuracy on overlapping characters was 0.9394; inference errors were 0.
+
+### Decision
+
+Keep the existing public one-pass typed program. Compact text-first JSON pairs are the best alternative shape, but simplifying the specification did not generalize. Do not switch to zero-shot, reversed pairs, TSV, or JSON objects based on these results.
+
+- JSON is already the right family, but compact pairs outperform verbose objects and text-first order strongly outperforms type-first order.
+- Three examples recover most of the zero-example loss, so examples are useful even for the 0.6B interpreter.
+- TSV eliminated malformed outputs but still produced far worse F1, showing that syntactic validity was not the main bottleneck.
+- The compact candidates traded precision for recall. Their apparent search-set gains did not survive independent selection, especially for the targeted restraint variant.
+- The long specification remains worthwhile for accuracy because users call only the compiled program ID; its length does not make the README or inference interface more complex.
+
+A post-selection compatibility check on the historical development set agreed: baseline typed F1 was 0.8221, versus 0.7939 for compact-three and 0.7873 for compact-restraint-v2. These runs did not affect selection.
+
 ## Compiled-program ledger
 
 Every manifest that records an exact specification is listed here. Public status is copied from the compile response or manifest; an em dash means the older manifest did not record it.
@@ -107,6 +158,12 @@ Every manifest that records an exact specification is listed here. Public status
 | `paw-finetuned-type-classifier-ft-v1-public.json` | `paw-ft-bs48` | `finetune_lora` | `91bf7b6cc82d95b24693` | yes | `5e5a7a161856b780fd44` | `specs/pii-type-classifier-ft-v1.txt` | `863546c871d7` |
 | `paw-finetuned-type-classifier-ft-v2-public.json` | `paw-ft-bs48` | `finetune_lora` | `2ebae87e0748d1a62a4b` | yes | `00f021ca1ff122188469` | `specs/pii-type-classifier-ft-v2.txt` | `f505e824aba4` |
 | `paw-finetuned-type-classifier-v2-public.json` | `paw-ft-bs48` | `finetune_lora` | `5603f8370b2df0e4bd27` | yes | `14451a1c1a7ac3720f79` | `specs/pii-type-classifier-v2.txt` | `c8ad02530828` |
+| `paw-finetuned-typed-compact-restraint-v2-public.json` | `paw-ft-bs48` | `finetune_lora` | `84e670f39693f2f67a65` | yes | `38b7ea8c22840954999e` | `specs/pii-detector-typed-compact-restraint-v2.txt` | `695cfb888890` |
+| `paw-finetuned-typed-compact-three-objects-v1-public.json` | `paw-ft-bs48` | `finetune_lora` | `75af38369b880b3b680b` | yes | `735aa72a439717022ee3` | `specs/pii-detector-typed-compact-three-objects-v1.txt` | `b370dd6243dd` |
+| `paw-finetuned-typed-compact-three-text-type-v1-public.json` | `paw-ft-bs48` | `finetune_lora` | `a6f44175f8750d57e148` | yes | `b73867e45b9db559bbe2` | `specs/pii-detector-typed-compact-three-text-type-v1.txt` | `c5cf3e9ca32c` |
+| `paw-finetuned-typed-compact-three-tsv-v1-public.json` | `paw-ft-bs48` | `finetune_lora` | `f8c67de4cd93553cd38f` | yes | `9e5241ed95e1e21de7cd` | `specs/pii-detector-typed-compact-three-tsv-v1.txt` | `c77a491e4163` |
+| `paw-finetuned-typed-compact-three-type-text-v1-public.json` | `paw-ft-bs48` | `finetune_lora` | `021a90c2c6cd7b103909` | yes | `6c1abf40fc5733e37c29` | `specs/pii-detector-typed-compact-three-type-text-v1.txt` | `816e4a25e226` |
+| `paw-finetuned-typed-compact-zero-v1-public.json` | `paw-ft-bs48` | `finetune_lora` | `af7dc8a9606e3c3a7c6b` | yes | `7bf73f09acaa18fd7a1d` | `specs/pii-detector-typed-compact-zero-v1.txt` | `7fcaf93482a8` |
 | `paw-finetuned-typed-ft-v1-public.json` | `paw-ft-bs48` | `finetune_lora` | `73a0e38b8bbe3427cd1d` | yes | `b28c5b6797a4730cfcf4` | `specs/pii-detector-typed-ft-v1.txt` | `376fae3801e2` |
 | `paw-finetuned-typed-ft-v3-public.json` | `paw-ft-bs48` | `finetune_lora` | `59d3c0f5e576b07df4a9` | yes | `1f2bc8cf422157078041` | `specs/pii-detector-typed-ft-v3.txt` | `99ee309c2064` |
 | `paw-finetuned-typed-ft-v4-public.json` | `paw-ft-bs48` | `finetune_lora` | `796978fe50b4701d96a4` | yes | `80c2f5252257a1916320` | `specs/pii-detector-typed-ft-v4.txt` | `6332033b0f8d` |
@@ -139,6 +196,17 @@ Rows with nonzero errors are retained as failed or partial runs and are not used
 
 | Result file | Data | Compiler/backend | Program | Errors | Extract P | Extract R | Extract F1 | Typed P | Typed R | Typed F1 | Type accuracy on overlap | Inference seconds |
 | --- | --- | --- | --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| `fresh-sealed-test-v2-paw-finetuned-typed-ft-v1-final.summary.json` | `fresh-sealed-test-v2.jsonl` | `paw-ft-bs48` | `73a0e38b8bbe3427cd1d` | 0 | 0.9005 | 0.9167 | 0.9085 | 0.8384 | 0.8546 | 0.8464 | 0.9394 | 941.8 |
+| `fresh-search-v2-paw-finetuned-typed-compact-restraint-v2.summary.json` | `fresh-search-v2.jsonl` | `paw-ft-bs48` | `84e670f39693f2f67a65` | 0 | 0.8759 | 0.9482 | 0.9106 | 0.8109 | 0.8873 | 0.8473 | 0.9357 | 858.6 |
+| `fresh-search-v2-paw-finetuned-typed-compact-three-objects-v1.summary.json` | `fresh-search-v2.jsonl` | `paw-ft-bs48` | `75af38369b880b3b680b` | 0 | 0.8611 | 0.9373 | 0.8976 | 0.7891 | 0.8689 | 0.8271 | 0.9270 | 1130.0 |
+| `fresh-search-v2-paw-finetuned-typed-compact-three-text-type-v1.summary.json` | `fresh-search-v2.jsonl` | `paw-ft-bs48` | `a6f44175f8750d57e148` | 0 | 0.8691 | 0.9430 | 0.9045 | 0.8096 | 0.8882 | 0.8471 | 0.9420 | 987.5 |
+| `fresh-search-v2-paw-finetuned-typed-compact-three-tsv-v1.summary.json` | `fresh-search-v2.jsonl` | `paw-ft-bs48` | `f8c67de4cd93553cd38f` | 0 | 0.8167 | 0.9404 | 0.8742 | 0.7403 | 0.8643 | 0.7975 | 0.9191 | 874.8 |
+| `fresh-search-v2-paw-finetuned-typed-compact-three-type-text-v1.summary.json` | `fresh-search-v2.jsonl` | `paw-ft-bs48` | `021a90c2c6cd7b103909` | 0 | 0.8589 | 0.9322 | 0.8940 | 0.7706 | 0.8490 | 0.8079 | 0.9107 | 926.3 |
+| `fresh-search-v2-paw-finetuned-typed-compact-zero-v1.summary.json` | `fresh-search-v2.jsonl` | `paw-ft-bs48` | `af7dc8a9606e3c3a7c6b` | 0 | 0.8635 | 0.9468 | 0.9032 | 0.7984 | 0.8851 | 0.8395 | 0.9348 | 927.8 |
+| `fresh-search-v2-paw-finetuned-typed-ft-v1-baseline.summary.json` | `fresh-search-v2.jsonl` | `paw-ft-bs48` | `73a0e38b8bbe3427cd1d` | 0 | 0.8912 | 0.9168 | 0.9038 | 0.8294 | 0.8658 | 0.8472 | 0.9443 | 813.5 |
+| `fresh-selection-v2-paw-finetuned-typed-compact-restraint-v2.summary.json` | `fresh-selection-v2.jsonl` | `paw-ft-bs48` | `84e670f39693f2f67a65` | 0 | 0.8369 | 0.9252 | 0.8788 | 0.7537 | 0.8366 | 0.7929 | 0.9079 | 947.2 |
+| `fresh-selection-v2-paw-finetuned-typed-compact-three-text-type-v1.summary.json` | `fresh-selection-v2.jsonl` | `paw-ft-bs48` | `a6f44175f8750d57e148` | 0 | 0.8431 | 0.9393 | 0.8886 | 0.7848 | 0.8758 | 0.8278 | 0.9363 | 795.6 |
+| `fresh-selection-v2-paw-finetuned-typed-ft-v1-baseline.summary.json` | `fresh-selection-v2.jsonl` | `paw-ft-bs48` | `73a0e38b8bbe3427cd1d` | 0 | 0.8892 | 0.9203 | 0.9045 | 0.8163 | 0.8488 | 0.8323 | 0.9262 | 907.4 |
 | `held-out-test-paw-finetuned-extractor-ft-v1-final.summary.json` | `held-out-test.jsonl` | `paw-ft-bs48` | `b263201af3d35848fbb3` | 0 | 0.9025 | 0.9182 | 0.9103 | — | — | — | — | 170.1 |
 | `held-out-test-paw-finetuned-two-stage-ft-v1-ft-v2-ctx48-final.summary.json` | `held-out-test.jsonl` | `paw-ft-bs48` | `2ebae87e0748d1a62a4b` | 0 | 0.9025 | 0.9182 | 0.9103 | 0.7867 | 0.8029 | 0.7947 | 0.8744 | 213.1 |
 | `held-out-test-paw-finetuned-typed-ft-v1-final.summary.json` | `held-out-test.jsonl` | `paw-ft-bs48` | `73a0e38b8bbe3427cd1d` | 0 | 0.8535 | 0.9147 | 0.8830 | 0.8065 | 0.8689 | 0.8366 | 0.9499 | 215.7 |
@@ -162,6 +230,8 @@ Rows with nonzero errors are retained as failed or partial runs and are not used
 | `train-development-500-paw-finetuned-extractor-ft-v3-reparsed.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `3cd1943e8c75147e28da` | 0 | 0.9188 | 0.9039 | 0.9113 | — | — | — | — | 491.7 |
 | `train-development-500-paw-finetuned-extractor-ft-v3.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `3cd1943e8c75147e28da` | 0 | 0.9188 | 0.9039 | 0.9113 | — | — | — | — | 491.7 |
 | `train-development-500-paw-finetuned-extractor-ft-v4.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `51c7f878cae07de144bd` | 0 | 0.9349 | 0.8970 | 0.9155 | — | — | — | — | 491.5 |
+| `train-development-500-paw-finetuned-typed-compact-restraint-v2.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `84e670f39693f2f67a65` | 0 | 0.8490 | 0.9117 | 0.8792 | 0.7563 | 0.8209 | 0.7873 | 0.9004 | 821.7 |
+| `train-development-500-paw-finetuned-typed-compact-three-text-type-v1.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `a6f44175f8750d57e148` | 0 | 0.8300 | 0.9321 | 0.8781 | 0.7475 | 0.8465 | 0.7939 | 0.9083 | 934.1 |
 | `train-development-500-paw-finetuned-typed-ft-v1-live.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `73a0e38b8bbe3427cd1d` | 0 | 0.9048 | 0.9075 | 0.9061 | 0.8164 | 0.8278 | 0.8221 | 0.9122 | 653.1 |
 | `train-development-500-paw-finetuned-typed-ft-v1.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `73a0e38b8bbe3427cd1d` | 477 | 1.0000 | 0.0000 | 0.0000 | 1.0000 | 0.0000 | 0.0000 | 1.0000 | 0.2 |
 | `train-development-500-paw-finetuned-typed-ft-v3.summary.json` | `train-development-500.jsonl` | `paw-ft-bs48` | `59d3c0f5e576b07df4a9` | 0 | 0.8358 | 0.9025 | 0.8679 | 0.7851 | 0.8583 | 0.8201 | 0.9510 | 683.0 |
@@ -416,6 +486,251 @@ Output: ["2023-12-17T00:00:00","6:24","75"]
 
 Input: Strategic_Plan: Piano Strategico per l'Attrazione degli Studenti. Activity_Name: Virtual Reality Integration in Educational Curriculum. Policy: Property damage liability waiver is granted. Participants: Tercera Persona Singular, Set I.
 Output: []
+```
+
+</details>
+
+<details>
+<summary><code>specs/pii-detector-typed-compact-restraint-v2.txt</code> — SHA-256 <code>695cfb888890147c3548f2247c9db009e6e529695f3125098e114c060d5c67ed</code></summary>
+
+```text
+Extract every AI4Privacy-style PII field from the input. Return ONLY a compact JSON array of [text,type] pairs, or [] when there is no PII. Copy text exactly from the input. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer a field label, table header, or record schema over visual shape.
+- Use private_person only for a field marked name, title, or username, or when context clearly introduces a person. Capitalization, quotation, or an alphanumeric shape alone does not make text a person.
+- An email is always private_email, an IP address is private_url, a telephone field is private_phone, and an ID, passport, license, social, bank, card, customer, order, or account field is account_number, regardless of visual shape.
+- A password, PIN, passcode, key, or token field is secret, including a masked password. Security products, controls, policies, permissions, and access modes are not secrets.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply it through the final complete field.
+- Outside a PII field or schema, extract only a self-identifying email, IP, phone, credential, or clear personal name. Ignore generic prose, roles, row indices, projects, activities, comments, statuses, placeholders, organizations, and ordinary locations.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct [text,type] pair once in first-occurrence order. Do not repeat an output cycle.
+
+Input: Name: Ada Lovelace; Email: ada@example.com; PIN: 4821; Note: Call after lunch.
+Output: [["Ada Lovelace","private_person"],["ada@example.com","private_email"],["4821","secret"]]
+
+Input: EMAIL,SOCIALNUMBER,IP,TEL\nK@x.co,1-72-09-38517-757-27,67.176.53.168,099 3802-9499
+Output: [["K@x.co","private_email"],["1-72-09-38517-757-27","account_number"],["67.176.53.168","private_url"],["099 3802-9499","private_phone"]]
+
+Input: SEX&BOD&USERNAME&COUNTRY&BUILDING&STREET&CITY&STATE&POSTCODE&TIME\nFemme&18 mars 1941&lina.rossi&FR&17&Rue des Fleurs&Lyon&ARA&69003&8:17
+Output: [["Femme","other_pii"],["18 mars 1941","private_date"],["lina.rossi","private_person"],["FR","private_address"],["17","private_address"],["Rue des Fleurs","private_address"],["Lyon","private_address"],["ARA","private_address"],["69003","private_address"],["8:17","private_date"]]
+
+Input: Username: moon47; Password: ********; Role: Administrator; Access: Read/Write; Security: Firewall, Malware Scan; Status: Active.
+Output: [["moon47","private_person"],["********","secret"]]
+
+Input: Project: Allergy education; Activity: Monitor allergies; Role: Instructor; Access: Limited; Security: Endpoint protection; Status: Active.
+Output: []
+```
+
+</details>
+
+<details>
+<summary><code>specs/pii-detector-typed-compact-three-objects-v1.txt</code> — SHA-256 <code>b370dd6243ddba0aba4cf50bba180a70731f058eccf7c5ee15923cbb97769254</code></summary>
+
+```text
+Extract every AI4Privacy-style PII field from the input. Return ONLY a compact JSON array of objects, or [] when there is no PII. Every object must be {"text":"exact copied text","type":"one allowed type"}. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer an explicit field label, table header, or repeating record schema over the visual shape of a value. A social number remains account_number when it resembles a phone or IP address.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply that cycle through the final complete field.
+- Outside a PII field or record schema, extract only self-identifying values such as an email address, IP address, phone number, credential, or clearly personal name. Do not extract generic prose, roles, row indices, project names, activities, comments, statuses, or placeholders.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct object once in first-occurrence order. Do not repeat an output cycle.
+
+Input: Name: Ada Lovelace; Email: ada@example.com; PIN: 4821; Note: Call after lunch.
+Output: [{"text":"Ada Lovelace","type":"private_person"},{"text":"ada@example.com","type":"private_email"},{"text":"4821","type":"secret"}]
+
+Input: EMAIL,SOCIALNUMBER,IP,TEL\nK@x.co,1-72-09-38517-757-27,67.176.53.168,099 3802-9499
+Output: [{"text":"K@x.co","type":"private_email"},{"text":"1-72-09-38517-757-27","type":"account_number"},{"text":"67.176.53.168","type":"private_url"},{"text":"099 3802-9499","type":"private_phone"}]
+
+Input: SEX&BOD&USERNAME&COUNTRY&BUILDING&STREET&CITY&STATE&POSTCODE&TIME\nFemme&18 mars 1941&lina.rossi&FR&17&Rue des Fleurs&Lyon&ARA&69003&8:17
+Output: [{"text":"Femme","type":"other_pii"},{"text":"18 mars 1941","type":"private_date"},{"text":"lina.rossi","type":"private_person"},{"text":"FR","type":"private_address"},{"text":"17","type":"private_address"},{"text":"Rue des Fleurs","type":"private_address"},{"text":"Lyon","type":"private_address"},{"text":"ARA","type":"private_address"},{"text":"69003","type":"private_address"},{"text":"8:17","type":"private_date"}]
+```
+
+</details>
+
+<details>
+<summary><code>specs/pii-detector-typed-compact-three-text-type-v1.txt</code> — SHA-256 <code>c5cf3e9ca32c8cf7b8fac3598b2d34084547b858b18e4c09a272ab82bd378fba</code></summary>
+
+```text
+Extract every AI4Privacy-style PII field from the input. Return ONLY a compact JSON array of [text,type] pairs, or [] when there is no PII. Copy text exactly from the input. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer an explicit field label, table header, or repeating record schema over the visual shape of a value. A social number remains account_number when it resembles a phone or IP address.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply that cycle through the final complete field.
+- Outside a PII field or record schema, extract only self-identifying values such as an email address, IP address, phone number, credential, or clearly personal name. Do not extract generic prose, roles, row indices, project names, activities, comments, statuses, or placeholders.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct [text,type] pair once in first-occurrence order. Do not repeat an output cycle.
+
+Input: Name: Ada Lovelace; Email: ada@example.com; PIN: 4821; Note: Call after lunch.
+Output: [["Ada Lovelace","private_person"],["ada@example.com","private_email"],["4821","secret"]]
+
+Input: EMAIL,SOCIALNUMBER,IP,TEL\nK@x.co,1-72-09-38517-757-27,67.176.53.168,099 3802-9499
+Output: [["K@x.co","private_email"],["1-72-09-38517-757-27","account_number"],["67.176.53.168","private_url"],["099 3802-9499","private_phone"]]
+
+Input: SEX&BOD&USERNAME&COUNTRY&BUILDING&STREET&CITY&STATE&POSTCODE&TIME\nFemme&18 mars 1941&lina.rossi&FR&17&Rue des Fleurs&Lyon&ARA&69003&8:17
+Output: [["Femme","other_pii"],["18 mars 1941","private_date"],["lina.rossi","private_person"],["FR","private_address"],["17","private_address"],["Rue des Fleurs","private_address"],["Lyon","private_address"],["ARA","private_address"],["69003","private_address"],["8:17","private_date"]]
+```
+
+</details>
+
+<details>
+<summary><code>specs/pii-detector-typed-compact-three-tsv-v1.txt</code> — SHA-256 <code>c77a491e416303082ef15949e42e266467445fc29a3d7d81f61816bfa795616e</code></summary>
+
+```text
+Extract every AI4Privacy-style PII field from the input. Return ONLY one result per line as type, one literal tab, then text. Return NONE when there is no PII. Copy text exactly from the input. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer an explicit field label, table header, or repeating record schema over the visual shape of a value. A social number remains account_number when it resembles a phone or IP address.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply that cycle through the final complete field.
+- Outside a PII field or record schema, extract only self-identifying values such as an email address, IP address, phone number, credential, or clearly personal name. Do not extract generic prose, roles, row indices, project names, activities, comments, statuses, or placeholders.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct type-tab-text row once in first-occurrence order. Do not repeat an output cycle.
+
+Input: Name: Ada Lovelace; Email: ada@example.com; PIN: 4821; Note: Call after lunch.
+Output:
+private_person	Ada Lovelace
+private_email	ada@example.com
+secret	4821
+
+Input: EMAIL,SOCIALNUMBER,IP,TEL\nK@x.co,1-72-09-38517-757-27,67.176.53.168,099 3802-9499
+Output:
+private_email	K@x.co
+account_number	1-72-09-38517-757-27
+private_url	67.176.53.168
+private_phone	099 3802-9499
+
+Input: SEX&BOD&USERNAME&COUNTRY&BUILDING&STREET&CITY&STATE&POSTCODE&TIME\nFemme&18 mars 1941&lina.rossi&FR&17&Rue des Fleurs&Lyon&ARA&69003&8:17
+Output:
+other_pii	Femme
+private_date	18 mars 1941
+private_person	lina.rossi
+private_address	FR
+private_address	17
+private_address	Rue des Fleurs
+private_address	Lyon
+private_address	ARA
+private_address	69003
+private_date	8:17
+```
+
+</details>
+
+<details>
+<summary><code>specs/pii-detector-typed-compact-three-type-text-v1.txt</code> — SHA-256 <code>816e4a25e22670fdbf95136678f67fa1309994e9b80d0f38f5d30d2e8010e2c7</code></summary>
+
+```text
+Extract every AI4Privacy-style PII field from the input. Return ONLY a compact JSON array of [type,text] pairs, or [] when there is no PII. Copy text exactly from the input. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer an explicit field label, table header, or repeating record schema over the visual shape of a value. A social number remains account_number when it resembles a phone or IP address.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply that cycle through the final complete field.
+- Outside a PII field or record schema, extract only self-identifying values such as an email address, IP address, phone number, credential, or clearly personal name. Do not extract generic prose, roles, row indices, project names, activities, comments, statuses, or placeholders.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct [type,text] pair once in first-occurrence order. Do not repeat an output cycle.
+
+Input: Name: Ada Lovelace; Email: ada@example.com; PIN: 4821; Note: Call after lunch.
+Output: [["private_person","Ada Lovelace"],["private_email","ada@example.com"],["secret","4821"]]
+
+Input: EMAIL,SOCIALNUMBER,IP,TEL\nK@x.co,1-72-09-38517-757-27,67.176.53.168,099 3802-9499
+Output: [["private_email","K@x.co"],["account_number","1-72-09-38517-757-27"],["private_url","67.176.53.168"],["private_phone","099 3802-9499"]]
+
+Input: SEX&BOD&USERNAME&COUNTRY&BUILDING&STREET&CITY&STATE&POSTCODE&TIME\nFemme&18 mars 1941&lina.rossi&FR&17&Rue des Fleurs&Lyon&ARA&69003&8:17
+Output: [["other_pii","Femme"],["private_date","18 mars 1941"],["private_person","lina.rossi"],["private_address","FR"],["private_address","17"],["private_address","Rue des Fleurs"],["private_address","Lyon"],["private_address","ARA"],["private_address","69003"],["private_date","8:17"]]
+```
+
+</details>
+
+<details>
+<summary><code>specs/pii-detector-typed-compact-zero-v1.txt</code> — SHA-256 <code>7fcaf93482a85c514e5786b303a7ad8f5d290e990e2f06f1f81e3ff93b66708d</code></summary>
+
+```text
+Extract every AI4Privacy-style PII field from the input. Return ONLY a compact JSON array of [text,type] pairs, or [] when there is no PII. Copy text exactly from the input. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer an explicit field label, table header, or repeating record schema over the visual shape of a value. A social number remains account_number when it resembles a phone or IP address.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply that cycle through the final complete field.
+- Outside a PII field or record schema, extract only self-identifying values such as an email address, IP address, phone number, credential, or clearly personal name. Do not extract generic prose, roles, row indices, project names, activities, comments, statuses, or placeholders.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct [text,type] pair once in first-occurrence order. Do not repeat an output cycle.
 ```
 
 </details>

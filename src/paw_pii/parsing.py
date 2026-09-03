@@ -3,13 +3,15 @@ from __future__ import annotations
 import json
 import re
 from dataclasses import dataclass
-from typing import Any
+from typing import Any, Literal
 
 from .types import Span
 
 _JSON_STRING = r'"(?:\\.|[^"\\])*"'
 _JSON_STRING_RE = re.compile(_JSON_STRING)
 _TYPED_PAIR = re.compile(rf"\[\s*(?P<value>{_JSON_STRING})\s*,\s*(?P<label>{_JSON_STRING})\s*\]")
+
+OutputFormat = Literal["json_text_type", "json_type_text", "tsv_type_text"]
 
 
 @dataclass(frozen=True)
@@ -74,39 +76,15 @@ def _extract_partial_untyped_values(text: str) -> list[str]:
     return values
 
 
-def parse_paw_output(source: str, output: str) -> ParseResult:
-    """Parse exact copied strings and map every occurrence back to source offsets."""
-
-    partially_recovered = False
-    try:
-        payload = _extract_json(output)
-    except (json.JSONDecodeError, TypeError, ValueError):
-        payload = _extract_partial_typed_pairs(output)
-        if not payload:
-            payload = _extract_partial_untyped_values(output)
-        if not payload:
-            return ParseResult(spans=(), malformed=True)
-        partially_recovered = True
-
-    if not isinstance(payload, list):
-        return ParseResult(spans=(), malformed=True)
-
+def _result_from_pairs(
+    source: str,
+    pairs: list[tuple[object, object]],
+    *,
+    malformed: bool,
+) -> ParseResult:
     spans: set[Span] = set()
     unmatched: list[str] = []
-    malformed = partially_recovered
-    for item in payload:
-        if isinstance(item, str):
-            value = item
-            label = "other_pii"
-        elif isinstance(item, dict):
-            value = item.get("text", item.get("value"))
-            label = item.get("type", item.get("label", "other_pii"))
-        elif isinstance(item, list) and len(item) == 2:
-            value, label = item
-        else:
-            malformed = True
-            continue
-
+    for value, label in pairs:
         if not isinstance(value, str) or not isinstance(label, str):
             malformed = True
             continue
@@ -123,3 +101,73 @@ def parse_paw_output(source: str, output: str) -> ParseResult:
         malformed=malformed,
         unmatched_values=tuple(unmatched),
     )
+
+
+def _parse_tsv_type_text(source: str, output: str) -> ParseResult:
+    cleaned = output.strip("\r\n")
+    fenced = re.fullmatch(r"```(?:tsv|text)?\s*(.*?)\s*```", cleaned, flags=re.DOTALL | re.I)
+    if fenced:
+        cleaned = fenced.group(1)
+    if cleaned.strip() in {"", "[]", "NONE"}:
+        return ParseResult(spans=())
+
+    pairs: list[tuple[object, object]] = []
+    malformed = False
+    for line in cleaned.splitlines():
+        if not line:
+            continue
+        if "\t" not in line:
+            malformed = True
+            continue
+        label, value = line.split("\t", 1)
+        pairs.append((value, label.strip()))
+    return _result_from_pairs(source, pairs, malformed=malformed)
+
+
+def parse_paw_output(
+    source: str,
+    output: str,
+    *,
+    output_format: OutputFormat = "json_text_type",
+) -> ParseResult:
+    """Parse exact copied strings and map every occurrence back to source offsets."""
+
+    if output_format == "tsv_type_text":
+        return _parse_tsv_type_text(source, output)
+    if output_format not in {"json_text_type", "json_type_text"}:
+        raise ValueError(f"unknown PAW output format: {output_format}")
+
+    partially_recovered = False
+    try:
+        payload = _extract_json(output)
+    except (json.JSONDecodeError, TypeError, ValueError):
+        payload = _extract_partial_typed_pairs(output)
+        if not payload:
+            payload = _extract_partial_untyped_values(output)
+        if not payload:
+            return ParseResult(spans=(), malformed=True)
+        partially_recovered = True
+
+    if not isinstance(payload, list):
+        return ParseResult(spans=(), malformed=True)
+
+    pairs: list[tuple[object, object]] = []
+    malformed = partially_recovered
+    for item in payload:
+        if isinstance(item, str):
+            value = item
+            label = "other_pii"
+        elif isinstance(item, dict):
+            value = item.get("text", item.get("value"))
+            label = item.get("type", item.get("label", "other_pii"))
+        elif isinstance(item, list) and len(item) == 2:
+            if output_format == "json_type_text":
+                label, value = item
+            else:
+                value, label = item
+        else:
+            malformed = True
+            continue
+        pairs.append((value, label))
+
+    return _result_from_pairs(source, pairs, malformed=malformed)

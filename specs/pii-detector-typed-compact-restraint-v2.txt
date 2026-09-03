@@ -1,0 +1,39 @@
+Extract every AI4Privacy-style PII field from the input. Return ONLY a compact JSON array of [text,type] pairs, or [] when there is no PII. Copy text exactly from the input. Use only these types: private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii.
+
+Types:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state or province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4 or IPv6 address.
+- private_date: birth date, annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank, card, customer, order, or account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex or gender value, or PII not covered above.
+
+Policy:
+- Prefer a field label, table header, or record schema over visual shape.
+- Use private_person only for a field marked name, title, or username, or when context clearly introduces a person. Capitalization, quotation, or an alphanumeric shape alone does not make text a person.
+- An email is always private_email, an IP address is private_url, a telephone field is private_phone, and an ID, passport, license, social, bank, card, customer, order, or account field is account_number, regardless of visual shape.
+- A password, PIN, passcode, key, or token field is secret, including a masked password. Security products, controls, policies, permissions, and access modes are not secrets.
+- In an unlabeled repeating sequence, infer the field cycle from the nearest header or complete record and apply it through the final complete field.
+- Outside a PII field or schema, extract only a self-identifying email, IP, phone, credential, or clear personal name. Ignore generic prose, roles, row indices, projects, activities, comments, statuses, placeholders, organizations, and ordinary locations.
+- Copy only the value, never its field label, role prefix, separator, surrounding prose, or brackets unless brackets are part of coordinates. Split adjacent fields instead of combining them.
+- Preserve spelling, punctuation, whitespace, accents, and capitalization. Never translate, normalize, repair, truncate, or invent a value.
+- Short values are valid when their field identifies them, including initials, titles, usernames, sex values, country or state codes, building numbers, and short times.
+- Scan the complete input and return each distinct [text,type] pair once in first-occurrence order. Do not repeat an output cycle.
+
+Input: Name: Ada Lovelace; Email: ada@example.com; PIN: 4821; Note: Call after lunch.
+Output: [["Ada Lovelace","private_person"],["ada@example.com","private_email"],["4821","secret"]]
+
+Input: EMAIL,SOCIALNUMBER,IP,TEL\nK@x.co,1-72-09-38517-757-27,67.176.53.168,099 3802-9499
+Output: [["K@x.co","private_email"],["1-72-09-38517-757-27","account_number"],["67.176.53.168","private_url"],["099 3802-9499","private_phone"]]
+
+Input: SEX&BOD&USERNAME&COUNTRY&BUILDING&STREET&CITY&STATE&POSTCODE&TIME\nFemme&18 mars 1941&lina.rossi&FR&17&Rue des Fleurs&Lyon&ARA&69003&8:17
+Output: [["Femme","other_pii"],["18 mars 1941","private_date"],["lina.rossi","private_person"],["FR","private_address"],["17","private_address"],["Rue des Fleurs","private_address"],["Lyon","private_address"],["ARA","private_address"],["69003","private_address"],["8:17","private_date"]]
+
+Input: Username: moon47; Password: ********; Role: Administrator; Access: Read/Write; Security: Firewall, Malware Scan; Status: Active.
+Output: [["moon47","private_person"],["********","secret"]]
+
+Input: Project: Allergy education; Activity: Monitor allergies; Role: Instructor; Access: Limited; Security: Endpoint protection; Status: Active.
+Output: []

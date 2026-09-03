@@ -29,6 +29,7 @@ class PawApiDetector:
         self.manifest_path = Path(manifest_path)
         self.manifest = json.loads(self.manifest_path.read_text(encoding="utf-8"))
         self.program_id = str(self.manifest["program_id"])
+        self.output_format = str(self.manifest.get("output_format", "json_text_type"))
         self.endpoint = endpoint
         self.max_tokens = max_tokens
         self.max_attempts = max_attempts
@@ -49,6 +50,7 @@ class PawApiDetector:
             "compiler": self.manifest.get("compiler"),
             "compiler_snapshot": self.manifest.get("compiler_snapshot"),
             "spec_sha256": self.manifest.get("spec_sha256"),
+            "output_format": self.output_format,
             "max_tokens": self.max_tokens,
             "max_attempts": self.max_attempts,
         }
@@ -83,7 +85,7 @@ class PawApiDetector:
             raw = payload.get("output")
             if not isinstance(raw, str):
                 raise ValueError("inference response did not contain a string output")
-            parsed = parse_paw_output(text, raw)
+            parsed = parse_paw_output(text, raw, output_format=self.output_format)
             return Detection(
                 spans=parsed.spans,
                 raw_output=raw,

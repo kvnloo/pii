@@ -63,6 +63,7 @@ AI4PRIVACY_TO_PII_TYPE: dict[str, str] = {
     "ACCOUNTNUMBER": "account_number",
     "BANKACCOUNT": "account_number",
     "CARDNUMBER": "account_number",
+    "CARDISSUER": "other_pii",
     "PASS": "secret",
     "PASSWORD": "secret",
     "TOKEN": "secret",

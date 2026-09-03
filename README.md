@@ -62,13 +62,13 @@ Compiling requires a PAW account and API key. Loading the published program by I
 
 ## Results
 
-On a frozen multilingual sample of 171 documents from the AI4Privacy validation split, the published program reached:
+On an untouched multilingual set of 512 AI4Privacy documents, the published program reached:
 
-- **0.8366 typed-character F1**
-- **0.8830 label-agnostic extraction F1**
-- **95.0% type accuracy** on characters where the prediction and annotation overlap
+- **0.8464 typed-character F1**
+- **0.9085 label-agnostic extraction F1**
+- **93.9% type accuracy** on characters where the prediction and annotation overlap
 
-Specifications were developed only on a separate 477-document sample from the training split. The held-out sample was evaluated after the winner was frozen.
+We compared compact JSON, reversed JSON, JSON objects, and TSV outputs on a separate 497-document search set, froze the finalists, and selected the published program on another 522 documents before opening the sealed set. All source groups are disjoint. The original compact `[text, type]` JSON interface won; simplifying its specification did not generalize.
 
 See [`RESULTS.md`](RESULTS.md) for every specification, compiled program, failed run, and benchmark result.
 
