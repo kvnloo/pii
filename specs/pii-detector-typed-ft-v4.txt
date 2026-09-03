@@ -1,0 +1,48 @@
+Extract every AI4Privacy-style PII value from the input and assign its canonical nine-way type. Return ONLY a valid compact JSON array of [text,type] pairs, or [] when there is no PII. In every pair, text must be an exact substring copied from the input and type must be exactly one of private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, or other_pii. Return one pair per annotated field occurrence. Never combine adjacent fields, include a field name or separator in text, translate text, normalize formatting, repair punctuation, invent text, repeat a value beyond its occurrences, use another label, or add explanation.
+
+Type mapping:
+- private_person: given name, surname, full personal name, personal title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building number, street, city, state/province, postcode, country, apartment/secondary address, or geographic coordinates.
+- private_url: personal/private URL or any IPv4/IPv6 address.
+- private_date: birth date, other annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, bank/card/customer/order/account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex/gender value or PII not covered above.
+
+Rules:
+- Follow an explicit field label, table header, repeating record schema, or strongly established alternation instead of guessing from visual shape alone. Infer the columns from a header or complete record and apply exactly those columns and types through the final complete record.
+- Scan through the final character, but return only values supported by a listed PII field or an established PII schema. Do not turn ordinary prose into names, addresses, dates, URLs, or secrets merely because it contains plausible-looking words or numbers.
+- In CSV or tables, ignore a generic ID/index column. An ID is account_number only when its field means ID card, passport, driver's license, social number, bank/card/account/customer/order identifier, or another personal account identifier.
+- Never return values from comment, note, agreement, waiver, admission status, description, usage, monitoring, security, restriction, perspective, grammatical person, project, course, program, activity, or ordinary location fields unless the value occupies a separately established PII field.
+- Generic role words such as candidate, participant, student, member, user, client, customer, support, instructor, trainee, and player are not personal names. If a personal name follows such a role, return only the name.
+- Split fields at ..., ampersand, comma, pipe, colon, semicolon, newline, visible backslash+n, HTML tags, or list boundaries. Preserve every character inside each value, but exclude surrounding labels, list markers, quotes, brackets, and separators unless brackets are part of geographic coordinates.
+- Every complete email address is private_email, including one-letter, all-capital, numeric, or username-like local parts. An IPv4 or IPv6 address is private_url, never secret or account_number. A dotted number is IPv4 only when it has exactly four valid octets.
+- A social number, passport, driver's license, or ID card is account_number even when it resembles a phone, IP, password, address, or name. Use secret only for an explicit password, PIN, passcode, key, token, or secret field.
+- In alternating EMAIL,SOCIALNUMBER records, every email is private_email and each following social number is account_number. In alternating SOCIALNUMBER,IP records, every social number is account_number and every IP is private_url. Preserve the alternation through the final complete pair.
+- A username and a personal title are private_person. A time or personal date is private_date. Address components are separate private_address values. A sex/gender field is other_pii.
+- In repeated title-plus-sex records, split each title from its sex value. M, F, H, W, V, Masculino, Femmina, Männlich, Vrouw, Non-binaire, Otro, Autre, and Prefiero no revelar are other_pii only in a sex/gender position.
+- In a pattern written as - id(n) - telephone, country, building, street, city, state, postcode, optional secondary address, surname, ignore id(n), return the telephone alone as private_phone, address fields as private_address, and the final surname as private_person.
+- Bracketed personal values remain PII, except generic underscore placeholders such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY]. Ignore a visibly severed fragment that cannot be identified.
+
+Input: ID,SOCIALNUMBER,TEL,COMMENTS\n1,777 064 4987,007.200-193-8263,"Plan and implement engaging course content."\n2,710.076.3818,099 3802-9499,"Integrate multimedia into the course."
+Output: [["777 064 4987","account_number"],["007.200-193-8263","private_phone"],["710.076.3818","account_number"],["099 3802-9499","private_phone"]]
+
+Input: tfjasta87868@gmail.com...2 57 01 85136 028 30...B@tutanota.com...2.49.03.19524.337.91...K@tutanota.com...1-72-09-38517-757-27...[46.63, -0.7]
+Output: [["tfjasta87868@gmail.com","private_email"],["2 57 01 85136 028 30","account_number"],["B@tutanota.com","private_email"],["2.49.03.19524.337.91","account_number"],["K@tutanota.com","private_email"],["1-72-09-38517-757-27","account_number"],["[46.63, -0.7]","private_address"]]
+
+Input: 2-60-03-76248-281-75,67.176.53.168...2.53.06.25467.868.33,126.207.172.140...2-48-01-24327-318-13,6a56:cd26:f4a2:15b9:372f:afff:8764:c0f3...[47.4, -1.59551]...00:08:32
+Output: [["2-60-03-76248-281-75","account_number"],["67.176.53.168","private_url"],["2.53.06.25467.868.33","account_number"],["126.207.172.140","private_url"],["2-48-01-24327-318-13","account_number"],["6a56:cd26:f4a2:15b9:372f:afff:8764:c0f3","private_url"],["[47.4, -1.59551]","private_address"],["00:08:32","private_date"]]
+
+Input: <li><strong>Pres Masculino</strong></li><li><strong>Ambassador Prefiero no revelar</strong></li><li><strong>Profesor Otro</strong></li><li><strong>Cde M</strong></li><p>Fecha: 09/06/2005 - Hora: 10:01</p>
+Output: [["Pres","private_person"],["Masculino","other_pii"],["Ambassador","private_person"],["Prefiero no revelar","other_pii"],["Profesor","private_person"],["Otro","other_pii"],["Cde","private_person"],["M","other_pii"],["09/06/2005","private_date"],["10:01","private_date"]]
+
+Input: - id(1) - 084.910-0987, Nederland, 770, Tiendweg, Lopik, UT, 3411, Kamenova\n- id(2) - +26.82 907.1047, NL, 414, Bruininxdeelse Kade, Leerdam, ZH, 4143 LM, Section 740, Krane
+Output: [["084.910-0987","private_phone"],["Nederland","private_address"],["770","private_address"],["Tiendweg","private_address"],["Lopik","private_address"],["UT","private_address"],["3411","private_address"],["Kamenova","private_person"],["+26.82 907.1047","private_phone"],["NL","private_address"],["414","private_address"],["Bruininxdeelse Kade","private_address"],["Leerdam","private_address"],["ZH","private_address"],["4143 LM","private_address"],["Section 740","private_address"],["Krane","private_person"]]
+
+Input: Password: d.20GBm!3!; PIN: 4821; Passport: P88W6668O; IP: 213.36.161.135; Sex: F; Email: A@protonmail.com
+Output: [["d.20GBm!3!","secret"],["4821","secret"],["P88W6668O","account_number"],["213.36.161.135","private_url"],["F","other_pii"],["A@protonmail.com","private_email"]]
+
+Input: Strategic_Plan: Piano Strategico per l'Attrazione degli Studenti. Activity_Name: Virtual Reality Integration in Educational Curriculum. Policy: Property damage liability waiver is granted. Participants: Tercera Persona Singular, Set I.
+Output: []

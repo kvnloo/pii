@@ -218,6 +218,62 @@ def diagnostic_breakdown(
     }
 
 
+def typed_diagnostic_breakdown(
+    documents: Sequence[Document], predictions: Sequence[Sequence[Span]]
+) -> dict[str, object]:
+    """Report per-type character metrics and wrong-type overlap confusions."""
+
+    if len(documents) != len(predictions):
+        raise ValueError("documents and predictions must have equal length")
+
+    by_type: dict[str, CharacterCounts] = defaultdict(CharacterCounts)
+    confusions: dict[str, dict[str, int]] = defaultdict(lambda: defaultdict(int))
+    for document, predicted in zip(documents, predictions, strict=True):
+        gold_by_type: dict[str, set[int]] = defaultdict(set)
+        predicted_by_type: dict[str, set[int]] = defaultdict(set)
+        for span in document.spans:
+            label = require_pii_type(span.label)
+            gold_by_type[label].update(range(span.start, span.end))
+        for span in predicted:
+            label = canonical_pii_type(span.label) or f"invalid:{span.label.strip().lower()}"
+            predicted_by_type[label].update(range(span.start, span.end))
+
+        for label in set(gold_by_type) | set(predicted_by_type):
+            gold_positions = gold_by_type[label]
+            predicted_positions = predicted_by_type[label]
+            by_type[label].add(
+                CharacterCounts(
+                    true_positive=len(gold_positions & predicted_positions),
+                    false_positive=len(predicted_positions - gold_positions),
+                    false_negative=len(gold_positions - predicted_positions),
+                )
+            )
+
+        gold_at_position: dict[int, set[str]] = defaultdict(set)
+        predicted_at_position: dict[int, set[str]] = defaultdict(set)
+        for label, label_positions in gold_by_type.items():
+            for position in label_positions:
+                gold_at_position[position].add(label)
+        for label, label_positions in predicted_by_type.items():
+            for position in label_positions:
+                predicted_at_position[position].add(label)
+        for position in gold_at_position.keys() & predicted_at_position.keys():
+            for gold_label in gold_at_position[position]:
+                for predicted_label in predicted_at_position[position]:
+                    if gold_label != predicted_label:
+                        confusions[gold_label][predicted_label] += 1
+
+    return {
+        "by_type": {
+            label: counts.to_dict() for label, counts in sorted(by_type.items())
+        },
+        "wrong_type_overlap_characters": {
+            gold_label: dict(sorted(predicted_labels.items()))
+            for gold_label, predicted_labels in sorted(confusions.items())
+        },
+    }
+
+
 def evaluate_documents(
     documents: Iterable[Document], predictions: Iterable[Sequence[Span]]
 ) -> EvaluationResult:

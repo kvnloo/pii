@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import re
+
 PII_TYPES = (
     "private_person",
     "private_email",
@@ -25,6 +27,8 @@ PII_TYPE_ALIASES: dict[str, str] = {
     "private_postcode": "private_address",
     "private_street": "private_address",
     "private_id": "account_number",
+    "private_account_number": "account_number",
+    "private_document": "account_number",
     "private_secret": "secret",
 }
 
@@ -78,7 +82,13 @@ def canonical_pii_type(label: str) -> str | None:
         return normalized
     if normalized in PII_TYPE_ALIASES:
         return PII_TYPE_ALIASES[normalized]
-    return AI4PRIVACY_TO_PII_TYPE.get(label.strip().upper())
+    source_label = label.strip().upper()
+    direct = AI4PRIVACY_TO_PII_TYPE.get(source_label)
+    if direct is not None:
+        return direct
+    # Structured records sometimes suffix a field with a row identifier.
+    base_label = re.sub(r"_[A-Z0-9]+$", "", source_label)
+    return AI4PRIVACY_TO_PII_TYPE.get(base_label)
 
 
 def require_pii_type(label: str) -> str:

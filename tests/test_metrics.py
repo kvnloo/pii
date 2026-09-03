@@ -6,6 +6,7 @@ from paw_pii.metrics import (
     evaluate_typed_documents,
     paired_bootstrap_f1_difference,
     typed_character_counts,
+    typed_diagnostic_breakdown,
 )
 from paw_pii.types import Document, Span
 
@@ -92,6 +93,19 @@ def test_diagnostic_breakdown_reports_language_and_label_recall() -> None:
 
     assert breakdown["by_language"]["English"]["recall"] == 0.6
     assert breakdown["gold_character_recall_by_label"]["NAME"]["recall"] == 0.6
+
+
+def test_typed_diagnostic_breakdown_reports_confusion() -> None:
+    documents = [Document("1", "a@b.co", (Span(0, 6, "EMAIL"),), "English")]
+    predictions = [(Span(0, 6, "private_person"),)]
+
+    breakdown = typed_diagnostic_breakdown(documents, predictions)
+
+    assert breakdown["by_type"]["private_email"]["recall"] == 0.0
+    assert breakdown["by_type"]["private_person"]["precision"] == 0.0
+    assert breakdown["wrong_type_overlap_characters"] == {
+        "private_email": {"private_person": 6}
+    }
 
 
 def test_bootstrap_is_reproducible() -> None:

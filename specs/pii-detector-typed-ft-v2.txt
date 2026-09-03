@@ -1,0 +1,79 @@
+Extract every AI4Privacy-style PII value from the input and assign its canonical nine-way type. Return ONLY a valid compact JSON array of [text,type] pairs, or [] when there is no PII. In every pair, text must be an exact substring copied from the input and type must be exactly one of private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, or other_pii. Return one pair per annotated field. Never combine adjacent fields, include a field name or separator in text, translate text, normalize formatting, repair punctuation, invent text, use another label, or add explanation.
+
+Type mapping:
+- private_person: given name, surname, full personal name, personal title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building number, street, city, state/province, postcode, country, apartment/secondary address, or geographic coordinates.
+- private_url: personal/private URL or any IPv4/IPv6 address.
+- private_date: birth date, other annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, bank/card/customer/order/account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex/gender value or PII not covered above.
+
+Follow the annotated field or repeating record schema, not a subjective sensitivity judgment or the visual shape alone. A username is private_person; a title is private_person; an IP address is private_url; a social number, passport, driver's license, or ID card is account_number; a password or PIN is secret; a time is private_date; a building, postcode, country, or coordinate is private_address; and a sex/gender value is other_pii. Labels may be English, Dutch, French, German, Italian, or Spanish. Inputs may be prose, JSON, XML, HTML, Markdown, YAML, forms, tables, messages, fragments, or dense delimiter-separated records. Extract short values such as M, F, H, GB, NL, ENG, 13, 163, Dr, Ms, or a three-letter identifier when their field identifies a listed PII type.
+
+Rules:
+- Scan through the final character and return every PII field. In repeated records, infer the columns from the header or a complete record and apply exactly those columns and types to every later record.
+- In CSV or tables, do not return the row number from a generic ID or index column. An ID is account_number only when its field means ID card, passport, driver's license, social number, bank/card/account/customer/order identifier, or another personal account identifier.
+- Never return values from comment, note, agreement, waiver, admission status, description, usage, monitoring, security, restriction, perspective, grammatical person, project, course, program, activity, or ordinary location fields unless the value itself occupies an explicitly listed PII field.
+- Generic role words such as candidate, participant, student, member, user, client, customer, support, instructor, and trainee are not part of a personal name. If a personal name follows such a role, return only the name as private_person.
+- Separators such as ..., ampersand, comma, pipe, colon, semicolon, newline, and visible backslash+n can divide fields. Split neighboring fields and preserve every character inside each text value.
+- Extract a date or time when it fills a DATE, TIME, BOD, birth-date, appointment, deadline, signature-date, or equivalent personal field. Do not extract an administrative period merely because its key contains Start Date or End Date. Month/year forms such as juillet/00, novembre/70, März/93, août/64 and hour forms such as 11h are private_date when they occupy date, birth-date, or time positions.
+- Usernames may be random letters/digits, dotted names, initials, bracketed values, or identifiers before a colon in a participant or message list. Do not include surrounding brackets in text.
+- Bracketed personal values are PII, except generic underscore placeholders such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY].
+- Split every annotated address component into a separate private_address pair. A repeating unlabeled address row may use telephone, country, building, street, city, state, postcode, secondary address, and surname as separate columns with private_phone, private_address, and private_person types.
+- When a name is followed by an ID in parentheses, separate them. Return the name only if it is an annotated personal-name field; return the parenthesized ID as account_number when it is a listed personal identifier.
+- Every complete string containing @ and an email domain is private_email, even when the local part is one letter, all capitals, numeric, or username-like.
+- An IPv4 or IPv6 address is always private_url, never secret or account_number. A dotted number is IPv4 only when it has exactly four valid octets; longer dotted, dashed, spaced, or plain numbers in a SOCIALNUMBER position are account_number.
+- A passport, driver's-license, ID-card, or social-number value is account_number regardless of whether it resembles a phone number, address, URL, password, or random identifier. Do not label a value secret without an explicit password, PIN, passcode, key, token, or secret field or a schema that establishes that field.
+- In alternating EMAIL,SOCIALNUMBER records, every email is private_email and each following social number is account_number. In alternating SOCIALNUMBER,IP records, every social number is account_number and every IP is private_url; preserve this alternation through the final record.
+- In a repeated title-plus-sex record, split the title and sex value. Titles such as Pres, Ambassador, Profesor, Príncipe, Cde, Baron, Duchesse, Roi, and Pape are private_person; sex values such as M, F, H, W, V, male, female, masculine, feminine, Masculino, Femmina, Männlich, Vrouw, Non-binaire, Otro, Autre, or Prefiero no revelar are other_pii.
+- In a pattern written as - id(n) - telephone, country, building, street, city, state, postcode, optional secondary address, surname, ignore the generic id(n), extract only the telephone as private_phone without the prefix, assign address components to private_address, and assign the final surname to private_person.
+- Return each annotated substring once per occurrence and stop after the last input field. Never repeat an output cycle to fill the token budget.
+- A complete value at the start or end of a chunk is valid. Ignore only a visibly severed fragment that cannot be identified.
+
+Input: ID,SOCIALNUMBER,TEL,COMMENTS\n1,777 064 4987,007.200-193-8263,"Plan and implement engaging course content."\n2,710.076.3818,099 3802-9499,"Integrate multimedia into the course."
+Output: [["777 064 4987","account_number"],["007.200-193-8263","private_phone"],["710.076.3818","account_number"],["099 3802-9499","private_phone"]]
+
+Input: ID,TITLE,IDCARD,DRIVERLICENSE,AGREEMENT\n1,"Baron","CUL","KQ84LLYHL6","Property damage liability waiver is granted."\n2,"Prinses","98118263685763","077780822","Final waiver documented and signed off."
+Output: [["Baron","private_person"],["CUL","account_number"],["KQ84LLYHL6","account_number"],["Prinses","private_person"],["98118263685763","account_number"],["077780822","account_number"]]
+
+Input: {"Schedule_A":{"Time":"20:19","Usage":"Available for basketball training","Monitoring":"Supervised by coaches","Security":"Key provided to club personnel"},"Schedule_B":{"Time":"6:01","Restrictions":"No outdoor shoes"}}
+Output: [["20:19","private_date"],["6:01","private_date"]]
+
+Input: nolwen.pedetti2003 participó desde una perspectiva Formal en Tercera Persona Singular. H ofreció su opinión desde la Tercera Persona Singular, Set II. gejpgb21 se unió a la conversación.
+Output: [["nolwen.pedetti2003","private_person"],["H","private_person"],["gejpgb21","private_person"]]
+
+Input: **Candidat Étienne**\n- Autre\n- Huissier\n- mathe.vuketic1998\n- Z0603982423869\n- +33 63.728-6394
+Output: [["Étienne","private_person"],["Autre","other_pii"],["Huissier","private_person"],["mathe.vuketic1998","private_person"],["Z0603982423869","account_number"],["+33 63.728-6394","private_phone"]]
+
+Input: Femme&18 mars 1941&sgummala@gmail.com&IWM&00817 090 768.6978&NL&353&Melis Stokelaan&Den Haag&ZH&2533 EL&Pod 9&8:17
+Output: [["Femme","other_pii"],["18 mars 1941","private_date"],["sgummala@gmail.com","private_email"],["IWM","account_number"],["00817 090 768.6978","private_phone"],["NL","private_address"],["353","private_address"],["Melis Stokelaan","private_address"],["Den Haag","private_address"],["ZH","private_address"],["2533 EL","private_address"],["Pod 9","private_address"],["8:17","private_date"]]
+
+Input: 2-60-03-76248-281-75,67.176.53.168...2.53.06.25467.868.33,126.207.172.140...[47.4, -1.59551]...00:08:32
+Output: [["2-60-03-76248-281-75","account_number"],["67.176.53.168","private_url"],["2.53.06.25467.868.33","account_number"],["126.207.172.140","private_url"],["[47.4, -1.59551]","private_address"],["00:08:32","private_date"]]
+
+Input: - id(1) - 084.910-0987, Nederland, 770, Tiendweg, Lopik, UT, 3411, Kamenova\n- id(2) - +26.82 907.1047, NL, 414, Bruininxdeelse Kade, Leerdam, ZH, 4143 LM, Section 740, Krane
+Output: [["084.910-0987","private_phone"],["Nederland","private_address"],["770","private_address"],["Tiendweg","private_address"],["Lopik","private_address"],["UT","private_address"],["3411","private_address"],["Kamenova","private_person"],["+26.82 907.1047","private_phone"],["NL","private_address"],["414","private_address"],["Bruininxdeelse Kade","private_address"],["Leerdam","private_address"],["ZH","private_address"],["4143 LM","private_address"],["Section 740","private_address"],["Krane","private_person"]]
+
+Input: Password: d.20GBm!3!; PIN: 4821; Passport: P88W6668O; IP: 213.36.161.135; Sex: F
+Output: [["d.20GBm!3!","secret"],["4821","secret"],["P88W6668O","account_number"],["213.36.161.135","private_url"],["F","other_pii"]]
+
+Input: tfjasta87868@gmail.com...2 57 01 85136 028 30...B@tutanota.com...2.49.03.19524.337.91...16zedije.pushparajan@protonmail.com...281026534565850...vorwpbmukqk371354@aol.com...278-32-5098...K@tutanota.com...1-72-09-38517-757-27...tervel@protonmail.com...1-37-05-86277-936-49...SEC2003@tutanota.com...915 878 5014...K2002@gmail.com...439515942620...gleison.coppey9@yahoo.com...1.35.08.74766.481.58...amrah.sarbat@tutanota.com...255090873523967...[46.63, -0.7]
+Output: [["tfjasta87868@gmail.com","private_email"],["2 57 01 85136 028 30","account_number"],["B@tutanota.com","private_email"],["2.49.03.19524.337.91","account_number"],["16zedije.pushparajan@protonmail.com","private_email"],["281026534565850","account_number"],["vorwpbmukqk371354@aol.com","private_email"],["278-32-5098","account_number"],["K@tutanota.com","private_email"],["1-72-09-38517-757-27","account_number"],["tervel@protonmail.com","private_email"],["1-37-05-86277-936-49","account_number"],["SEC2003@tutanota.com","private_email"],["915 878 5014","account_number"],["K2002@gmail.com","private_email"],["439515942620","account_number"],["gleison.coppey9@yahoo.com","private_email"],["1.35.08.74766.481.58","account_number"],["amrah.sarbat@tutanota.com","private_email"],["255090873523967","account_number"],["[46.63, -0.7]","private_address"]]
+
+Input: juillet/00, 01:12:35, Chemin de l'Étang...ssiksou, 2002-07-25T00:00:00...1970bixio.gourlaouen, novembre/70...1993bolombo, 17/05/1993...elloh, 20 mai 1966...ogozhkyfqekpqzm49, 6 juillet 1997...bekic, 27/05/1983...seon.iannucci, 07/10/1965...bcbteuwprkwrpq23, 1993-09-04T00:00:00...georgette.sandonà, 1983-09-26T00:00:00...vondergroeben, août/64...
+Output: [["juillet/00","private_date"],["01:12:35","private_date"],["Chemin de l'Étang","private_address"],["ssiksou","private_person"],["2002-07-25T00:00:00","private_date"],["1970bixio.gourlaouen","private_person"],["novembre/70","private_date"],["1993bolombo","private_person"],["17/05/1993","private_date"],["elloh","private_person"],["20 mai 1966","private_date"],["ogozhkyfqekpqzm49","private_person"],["6 juillet 1997","private_date"],["bekic","private_person"],["27/05/1983","private_date"],["seon.iannucci","private_person"],["07/10/1965","private_date"],["bcbteuwprkwrpq23","private_person"],["1993-09-04T00:00:00","private_date"],["georgette.sandonà","private_person"],["1983-09-26T00:00:00","private_date"],["vondergroeben","private_person"],["août/64","private_date"]]
+
+Input: 3 FRA 31XS5675 6 061229 LUANN\n- Giocatore D: \n   - XJW091723R\n   - 0263907438\n- Giocatore E: \n   - ACJ562952F\n   - 9135062264\n- Giocatore F: \n   - POB048638B\n   - 2398226009\n- Giocatore G: \n   - KST285730Q\n   - 4395026092
+Output: [["XJW091723R","account_number"],["0263907438","account_number"],["ACJ562952F","account_number"],["9135062264","account_number"],["POB048638B","account_number"],["2398226009","account_number"],["KST285730Q","account_number"],["4395026092","account_number"]]
+
+Input: n: R8.31.PFSGVVM.8\n   - Pass: U73K2612E\n\n4. Schüler D:\n   - Führerschein: C6.27.SPSVM67.4\n   - Pass: P88W6668O\n\n5. Schüler E:\n   - Führerschein: C1.45.S3BCML8.3\n   - Pass: C98V6099G\n\n6. Schüler F:\n   - Führerschein: M2923BZ8ND49\n   - Pass: Y17Q7977Z\n\n7. Schüler G:\n   - Führerschein: T8327MKT2SW5\n   - Pass: A92H5631K\n\n8. Schüler H:\n   - Führerschein: A5.29.U
+Output: [["R8.31.PFSGVVM.8","account_number"],["U73K2612E","account_number"],["C6.27.SPSVM67.4","account_number"],["P88W6668O","account_number"],["C1.45.S3BCML8.3","account_number"],["C98V6099G","account_number"],["M2923BZ8ND49","account_number"],["Y17Q7977Z","account_number"],["T8327MKT2SW5","account_number"],["A92H5631K","account_number"],["A5.29.U","account_number"]]
+
+Input: <li><strong>Pres Masculino</strong></li><li><strong>Ambassador Prefiero no revelar</strong></li><li><strong>Profesor Otro</strong></li><li><strong>Príncipe Masculino</strong></li><li><strong>Cde M</strong></li><p>Fecha de creación: 09/06/2005 - Hora: 10:01</p>
+Output: [["Pres","private_person"],["Masculino","other_pii"],["Ambassador","private_person"],["Prefiero no revelar","other_pii"],["Profesor","private_person"],["Otro","other_pii"],["Príncipe","private_person"],["Masculino","other_pii"],["Cde","private_person"],["M","other_pii"],["09/06/2005","private_date"],["10:01","private_date"]]
+
+Input: Strategic_Plan: Piano Strategico per l'Attrazione degli Studenti. Activity_Name: Virtual Reality Integration in Educational Curriculum. Policy: Property damage liability waiver is granted. Participants: Tercera Persona Singular, Set I.
+Output: []

@@ -1,30 +1,14 @@
-Extract every substring in the input that is private, personal, identifying,
-contact, account, location, or secret information. Return ONLY a valid JSON
-array of strings. Copy each string exactly from the input, with identical
-spelling, accents, spacing, and punctuation inside the value. Return [] when
-there is no PII. Do not explain the answer. Do not include field labels or
-surrounding prose.
+Extract every substring in the input that is private, personal, identifying, contact, account, location, or secret information. Return ONLY a valid JSON array of strings. Copy each string exactly from the input, with identical spelling, accents, spacing, and punctuation inside the value. Return [] when there is no PII. Do not explain the answer. Do not include field labels or surrounding prose.
 
 Include all values in these groups:
-- A person's identity: full or partial names, initials, titles attached to a
-  name, aliases, usernames, handles, customer or employee identities.
-- Contact and online identity: email, phone, fax, URL, IP address, MAC address,
-  social profile, hostname, and device identifiers.
-- Government, financial, medical, vehicle, and account identifiers: social
-  numbers, passports, national IDs, driver's licenses, tax IDs, bank accounts,
-  cards, routing codes, insurance numbers, license plates, serial numbers.
-- Credentials and secrets: passwords, PINs, API keys, tokens, access codes,
-  cryptographic keys, and security answers.
-- Personal location: street, building number, apartment, postcode, city,
-  county, state or province, country, GPS coordinates, and complete addresses.
-- Personal facts that identify or distinguish someone: birth date, any date or
-  time recorded in a person's file, age, gender, nationality, job, employer,
-  education, and similar structured-record values.
+- A person's identity: full or partial names, initials, titles attached to a name, aliases, usernames, handles, customer or employee identities.
+- Contact and online identity: email, phone, fax, URL, IP address, MAC address, social profile, hostname, and device identifiers.
+- Government, financial, medical, vehicle, and account identifiers: social numbers, passports, national IDs, driver's licenses, tax IDs, bank accounts, cards, routing codes, insurance numbers, license plates, serial numbers.
+- Credentials and secrets: passwords, PINs, API keys, tokens, access codes, cryptographic keys, and security answers.
+- Personal location: street, building number, apartment, postcode, city, county, state or province, country, GPS coordinates, and complete addresses.
+- Personal facts that identify or distinguish someone: birth date, any date or time recorded in a person's file, age, gender, nationality, job, employer, education, and similar structured-record values.
 
-When text is formatted as a form, record, table, profile, application, account,
-or message, treat the value after a PII-like field label as PII even when the
-value is short or unusual. Extract the value, not the label. Prefer one complete
-span per value instead of splitting it into pieces.
+When text is formatted as a form, record, table, profile, application, account, or message, treat the value after a PII-like field label as PII even when the value is short or unusual. Extract the value, not the label. Prefer one complete span per value instead of splitting it into pieces.
 
 Input: Hi, I'm Daniel Whitfield. Email daniels@meridiancap.com or call 415-555-0123.
 Output: ["Daniel Whitfield","daniels@meridiancap.com","415-555-0123"]

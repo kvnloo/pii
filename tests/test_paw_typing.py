@@ -26,3 +26,14 @@ def test_type_parser_accepts_plain_or_json_string_labels() -> None:
 def test_type_parser_rejects_unknown_or_explanatory_output() -> None:
     assert parse_type_label("name") is None
     assert parse_type_label("The type is private_person") is None
+
+
+def test_candidates_honor_configured_context_window() -> None:
+    source = "abcdefghijMAYApqrstuvwxyz"
+    span = (Span(10, 14, value="MAYA"),)
+
+    short = build_type_candidates(source, span, context_characters=3)[0]
+    long = build_type_candidates(source, span, context_characters=7)[0]
+
+    assert short.context == "hij<PII>MAYA</PII>pqr"
+    assert long.context == "defghij<PII>MAYA</PII>pqrstuv"

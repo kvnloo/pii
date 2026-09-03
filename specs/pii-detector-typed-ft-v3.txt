@@ -1,0 +1,43 @@
+Extract every AI4Privacy-style PII value and type. Return ONLY a compact valid JSON array of [text,type] pairs, or []. Text must be an exact input substring and type exactly private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, or other_pii. Return one pair per annotated field. Never combine fields, include labels or separators, normalize or invent text, repeat a cycle, or explain.
+
+Type mapping:
+- private_person: personal name, surname, title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building, street, city, state/province, postcode, country, secondary address, or coordinates.
+- private_url: personal URL or IPv4/IPv6 address.
+- private_date: birth date, personal date, or time.
+- account_number: ID card, passport, driver's license, social number, or personal bank/card/customer/order/account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex/gender or PII not covered above.
+
+Rules:
+- Scan through the final character. Infer every column from a header or complete record and preserve the schema in later rows. Return each annotated occurrence once, then close the array.
+- Ignore generic ID/index columns and values in comments, notes, agreements, statuses, descriptions, restrictions, perspective, project, course, program, or activity fields.
+- Split neighboring fields at ..., ampersand, comma, pipe, colon, semicolon, newline, visible backslash+n, HTML tags, or list boundaries. Preserve all characters inside each value but no surrounding brackets unless coordinates include brackets.
+- A username or title is private_person; an IP is private_url; a social number, passport, driver's license, or ID card is account_number; a password/PIN is secret; a time/date is private_date; an address component is private_address; and a sex/gender value is other_pii.
+- Every complete string with @ and an email domain is private_email, including one-letter, uppercase, numeric, or username-like local parts.
+- In alternating EMAIL,SOCIALNUMBER sequences, @ values are private_email and alternating numeric, dotted, dashed, spaced, or alphanumeric values are account_number. In alternating SOCIALNUMBER,IP sequences, valid four-octet IPv4 and colon-delimited IPv6 values are private_url and the alternating values are account_number.
+- A social number, passport, license, or ID is account_number even if it resembles a phone, IP, password, address, or name. Use secret only for an explicit password, PIN, passcode, key, token, or secret field.
+- Month/year dates such as juillet/00, novembre/70, März/93, and août/64 and hours such as 11h are private_date in date/time positions.
+- Split title-plus-sex records: the title is private_person and M, F, H, W, V, Masculino, Femmina, Männlich, Vrouw, Non-binaire, Otro, Autre, or Prefiero no revelar is other_pii in a sex position.
+- In - id(n) - telephone, country, building, street, city, state, postcode, optional secondary address, surname rows, ignore id(n), return the telephone alone as private_phone, address fields as private_address, and surname as private_person.
+- Generic roles are not part of a name. Generic underscore placeholders are not PII.
+
+Input: tfjasta87868@gmail.com...2 57 01 85136 028 30...B@tutanota.com...2.49.03.19524.337.91...16zedije.pushparajan@protonmail.com...281026534565850...vorwpbmukqk371354@aol.com...278-32-5098...K@tutanota.com...1-72-09-38517-757-27...tervel@protonmail.com...1-37-05-86277-936-49...SEC2003@tutanota.com...915 878 5014...K2002@gmail.com...439515942620...[46.63, -0.7]
+Output: [["tfjasta87868@gmail.com","private_email"],["2 57 01 85136 028 30","account_number"],["B@tutanota.com","private_email"],["2.49.03.19524.337.91","account_number"],["16zedije.pushparajan@protonmail.com","private_email"],["281026534565850","account_number"],["vorwpbmukqk371354@aol.com","private_email"],["278-32-5098","account_number"],["K@tutanota.com","private_email"],["1-72-09-38517-757-27","account_number"],["tervel@protonmail.com","private_email"],["1-37-05-86277-936-49","account_number"],["SEC2003@tutanota.com","private_email"],["915 878 5014","account_number"],["K2002@gmail.com","private_email"],["439515942620","account_number"],["[46.63, -0.7]","private_address"]]
+
+Input: 2-60-03-76248-281-75,67.176.53.168...2.53.06.25467.868.33,126.207.172.140...2-48-01-24327-318-13,6a56:cd26:f4a2:15b9:372f:afff:8764:c0f3...1.50.12.71501.796.58,9ee3:624b:2c52:ff73:b147:d96a:8da:6064...1 70 03 66791 501 11,962:2d18:c84a:dc4a:7ebf:657b:dce1:9b57...239064649446220,0.30.156.50...[47.4, -1.59551]...00:08:32
+Output: [["2-60-03-76248-281-75","account_number"],["67.176.53.168","private_url"],["2.53.06.25467.868.33","account_number"],["126.207.172.140","private_url"],["2-48-01-24327-318-13","account_number"],["6a56:cd26:f4a2:15b9:372f:afff:8764:c0f3","private_url"],["1.50.12.71501.796.58","account_number"],["9ee3:624b:2c52:ff73:b147:d96a:8da:6064","private_url"],["1 70 03 66791 501 11","account_number"],["962:2d18:c84a:dc4a:7ebf:657b:dce1:9b57","private_url"],["239064649446220","account_number"],["0.30.156.50","private_url"],["[47.4, -1.59551]","private_address"],["00:08:32","private_date"]]
+
+Input: juillet/00, 01:12:35, Chemin de l'Étang...ssiksou, 2002-07-25T00:00:00...1970bixio.gourlaouen, novembre/70...1993bolombo, 17/05/1993...elloh, 20 mai 1966...ogozhkyfqekpqzm49, 6 juillet 1997...bekic, 27/05/1983...seon.iannucci, 07/10/1965...bcbteuwprkwrpq23, août/64
+Output: [["juillet/00","private_date"],["01:12:35","private_date"],["Chemin de l'Étang","private_address"],["ssiksou","private_person"],["2002-07-25T00:00:00","private_date"],["1970bixio.gourlaouen","private_person"],["novembre/70","private_date"],["1993bolombo","private_person"],["17/05/1993","private_date"],["elloh","private_person"],["20 mai 1966","private_date"],["ogozhkyfqekpqzm49","private_person"],["6 juillet 1997","private_date"],["bekic","private_person"],["27/05/1983","private_date"],["seon.iannucci","private_person"],["07/10/1965","private_date"],["bcbteuwprkwrpq23","private_person"],["août/64","private_date"]]
+
+Input: - id(1) - 084.910-0987, Nederland, 770, Tiendweg, Lopik, UT, 3411, Kamenova\n- id(2) - +26.82 907.1047, NL, 414, Bruininxdeelse Kade, Leerdam, ZH, 4143 LM, Section 740, Krane
+Output: [["084.910-0987","private_phone"],["Nederland","private_address"],["770","private_address"],["Tiendweg","private_address"],["Lopik","private_address"],["UT","private_address"],["3411","private_address"],["Kamenova","private_person"],["+26.82 907.1047","private_phone"],["NL","private_address"],["414","private_address"],["Bruininxdeelse Kade","private_address"],["Leerdam","private_address"],["ZH","private_address"],["4143 LM","private_address"],["Section 740","private_address"],["Krane","private_person"]]
+
+Input: 3 FRA 31XS5675 6 061229 LUANN\n- Giocatore D:\n- XJW091723R\n- 0263907438\n- Giocatore E:\n- ACJ562952F\n- 9135062264\n- Giocatore F:\n- POB048638B\n- 2398226009
+Output: [["XJW091723R","account_number"],["0263907438","account_number"],["ACJ562952F","account_number"],["9135062264","account_number"],["POB048638B","account_number"],["2398226009","account_number"]]
+
+Input: <li><strong>Pres Masculino</strong></li><li><strong>Ambassador Prefiero no revelar</strong></li><li><strong>Profesor Otro</strong></li><li><strong>Príncipe Masculino</strong></li><li><strong>Cde M</strong></li><p>Fecha: 09/06/2005 - Hora: 10:01</p>
+Output: [["Pres","private_person"],["Masculino","other_pii"],["Ambassador","private_person"],["Prefiero no revelar","other_pii"],["Profesor","private_person"],["Otro","other_pii"],["Príncipe","private_person"],["Masculino","other_pii"],["Cde","private_person"],["M","other_pii"],["09/06/2005","private_date"],["10:01","private_date"]]

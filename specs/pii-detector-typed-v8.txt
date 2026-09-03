@@ -1,0 +1,65 @@
+Extract every AI4Privacy-style PII value from the input and assign its nine-way type. Return ONLY a valid compact JSON array of [text,type] pairs, or [] when there is no PII. In each pair, text must be an exact substring copied from the input and type must be exactly one of private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, or other_pii. Never use or copy any other type name, including source field names with suffixes. No objects, explanations, labels outside the pairs, or surrounding text. Never combine separate source fields into one text value.
+
+Type mapping:
+- private_person: given name, surname, full personal name, personal title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building number, street, city, state/province, postcode, country, apartment/secondary address, or geographic coordinates.
+- private_url: personal/private URL or any IPv4/IPv6 address.
+- private_date: birth date, other personal date, or time.
+- account_number: ID card, passport, driver's license, social number, bank/card/customer/order/account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex/gender value or PII not covered above.
+
+Follow the source field and record structure, not a subjective sensitivity judgment or the visual shape alone. A username is private_person and an IP address is private_url. A numeric password is secret, while a random-looking passport/license/ID/account value is account_number. A sex/gender field is other_pii. Extract short values such as M, F, GB, NL, ENG, 13, 163, Dr, Ms, or a three-letter ID when context identifies a PII field. Fields and prose may be English, Dutch, French, German, Italian, or Spanish. Inputs may be prose, JSON, XML, Markdown, YAML, forms, tables, lists, messages, or fragments.
+
+Important patterns:
+- Extract dates and times in labeled fields, schedules, appointments, deadlines, or phrases like "from the date ..." in any of the six languages.
+- Usernames can be random letters/digits, dotted names, initials, bracketed values, or identifiers before a colon in a participant/message list.
+- Bracketed personal values are PII, but generic template placeholders containing underscores such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY] are not.
+- Split each address component into its own private_address pair. Do not merge a building, street, city, state, country, or postcode.
+- When a name is followed by an ID in parentheses, separate them and assign account_number to the ID.
+- Ignore an incomplete value cut off at the very start or end. Never guess, complete, translate, or normalize text; copy it exactly.
+- Do not extract organization names, universities, medical conditions, ordinary topics, or generic role descriptions unless explicitly one of the listed personal fields.
+
+Input: Hi, I'm Daniel Whitfield. Email daniels@meridiancap.com or call 415-555-0123.
+Output: [["Daniel Whitfield","private_person"],["daniels@meridiancap.com","private_email"],["415-555-0123","private_phone"]]
+
+Input: - Meeting at 2:33 PM\n- N23 - Meeting at 11:29pm\n- wennmann27 - Meeting at 4:45 PM
+Output: [["2:33 PM","private_date"],["N23","private_person"],["11:29pm","private_date"],["wennmann27","private_person"],["4:45 PM","private_date"]]
+
+Input: Beste deelnemers:\n- **JVT:** welkom.\n- **BYH:** bedankt.\nDatum: 2040-05-07T00:00:00
+Output: [["JVT","private_person"],["BYH","private_person"],["2040-05-07T00:00:00","private_date"]]
+
+Input: Geachte [20amara]. [Minister]: welkom. Background(augustus/39)
+Output: [["20amara","private_person"],["Minister","private_person"],["augustus/39","private_date"]]
+
+Input: País: US; Dirección: 927, Calle: Shaft Road, Ciudad: Wawarsing, Estado: NY, Código Postal: 12446; Nombre: Úrsula (00477097062)
+Output: [["US","private_address"],["927","private_address"],["Shaft Road","private_address"],["Wawarsing","private_address"],["NY","private_address"],["12446","private_address"],["00477097062","account_number"]]
+
+Input: Profile URL: https://portal.example/u/maya; IP: 192.168.1.8; PIN: 4821; Sex: F
+Output: [["https://portal.example/u/maya","private_url"],["192.168.1.8","private_url"],["4821","secret"],["F","other_pii"]]
+
+Input: {"DRIVERLICENSE_A":"AR6ZOGUIQLB","LASTNAME1_A":"Valverde","PASSPORT_B":"U73K2612E","TIME_BG":"3h","DATE_BG":"augustus 6e, 2015"}
+Output: [["AR6ZOGUIQLB","account_number"],["Valverde","private_person"],["U73K2612E","account_number"],["3h","private_date"],["augustus 6e, 2015","private_date"]]
+
+Input: Führerschein: C6.27.SPSVM67.4\nPass: P88W6668O\nPasswort: d.20GBm!3!
+Output: [["C6.27.SPSVM67.4","account_number"],["P88W6668O","account_number"],["d.20GBm!3!","secret"]]
+
+Input: Codice Fiscale: Bor Rot 24 D 56 0 CSO\nCarta d'Identità: UML711382U\nPassword: lx6QKu9}n2]
+Output: [["Bor Rot 24 D 56 0 CSO","account_number"],["UML711382U","account_number"],["lx6QKu9}n2]","secret"]]
+
+Input: 2-60-03-76248-281-75,67.176.53.168...2.53.06.25467.868.33,126.207.172.140...[47.4, -1.59551]...00:08:32
+Output: [["2-60-03-76248-281-75","account_number"],["67.176.53.168","private_url"],["2.53.06.25467.868.33","account_number"],["126.207.172.140","private_url"],["[47.4, -1.59551]","private_address"],["00:08:32","private_date"]]
+
+Input: **Candidat Henri**\n- Écuyer\n- Q0121990\n**Candidat Isabelle**\n- Duchesse\n- T1904358317741
+Output: [["Écuyer","private_person"],["Q0121990","account_number"],["Duchesse","private_person"],["T1904358317741","account_number"]]
+
+Input: Weitere Bewerber:\n- W68O4084J\n- C99W5481I\n- R58H7016C\nHintergrundinformationen:\nUhrzeit: 2h\nGebäude: 101
+Output: [["W68O4084J","account_number"],["C99W5481I","account_number"],["R58H7016C","account_number"],["2h","private_date"],["101","private_address"]]
+
+Input: Date: [CURRENT_DATE]; Title: [Madame]; Born: [juin/47]; ID: [5716022019873]; School: [UNIVERSITY_NAME]
+Output: [["Madame","private_person"],["juin/47","private_date"],["5716022019873","account_number"]]
+
+Input: The university reviewed the application and scheduled a general discussion.
+Output: []

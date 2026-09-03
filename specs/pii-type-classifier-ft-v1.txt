@@ -1,0 +1,110 @@
+Classify the one already-detected PII value enclosed by <PII> and </PII> in its source context. Return exactly one label and nothing else. The only valid labels are private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, and other_pii.
+
+Type mapping:
+- private_person: given name, surname, full personal name, personal title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building number, street, city, state/province, postcode, country, apartment/secondary address, or geographic coordinates.
+- private_url: personal/private URL or any IPv4/IPv6 address.
+- private_date: birth date, other personal date, or time.
+- account_number: ID card, passport, driver's license, social number, bank/card/customer/order/account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex/gender value or PII not covered above.
+
+Use the field label when it is visible. Otherwise infer the repeating local schema from the values immediately before and after <PII>. Do not copy a neighbor's type merely because it is nearby. In alternating dense sequences, recognize each column independently: email is private_email, social or government ID is account_number, IP is private_url, time/date is private_date, username/name/title is private_person, telephone is private_phone, address component is private_address, password is secret, and sex/gender is other_pii. A dotted social number can resemble an IP but has groups or octets outside valid IPv4 structure. A social number can resemble a telephone but is account_number in an email/social-number sequence. A random-looking username is private_person. A numeric password is secret. A random-looking passport/license/ID is account_number, never secret.
+
+Input: Email: <PII>maya@example.com</PII>
+Output: private_email
+
+Input: Call <PII>+1 (416) 555-0148</PII> today.
+Output: private_phone
+
+Input: Address: <PII>927 Shaft Road</PII>, Wawarsing, NY.
+Output: private_address
+
+Input: Coordinates: <PII>[51.9, 5.2147]</PII>
+Output: private_address
+
+Input: IP: <PII>192.168.1.8</PII>
+Output: private_url
+
+Input: Birth date: <PII>April 12, 1990</PII>
+Output: private_date
+
+Input: Passport: <PII>X1234567</PII>
+Output: account_number
+
+Input: Password: <PII>?b.6vBl</PII>
+Output: secret
+
+Input: Username: <PII>13ritz</PII>
+Output: private_person
+
+Input: Título: <PII>Señora</PII>
+Output: private_person
+
+Input: Sex: <PII>F</PII>
+Output: other_pii
+
+Input: tfjasta87868@gmail.com...<PII>2 57 01 85136 028 30</PII>...B@tutanota.com
+Output: account_number
+
+Input: 2-60-03-76248-281-75,<PII>67.176.53.168</PII>...2.53.06.25467.868.33
+Output: private_url
+
+Input: 67.176.53.168...<PII>2.53.06.25467.868.33</PII>,126.207.172.140
+Output: account_number
+
+Input: 2.53.06.25467.868.33,<PII>126.207.172.140</PII>...2-48-01-24327-318-13
+Output: private_url
+
+Input: irfotmpiitecnl380411@protonmail.com&<PII>QCJ320742T</PII>&12:14 - SR@outlook.com
+Output: account_number
+
+Input: protonmail.com&QCJ320742T&<PII>12:14</PII> - SR@outlook.com
+Output: private_date
+
+Input: juillet/00, 01:12:35, Chemin de l'Étang...<PII>ssiksou</PII>, 2002-07-25T00:00:00
+Output: private_person
+
+Input: Chemin de l'Étang...ssiksou, <PII>2002-07-25T00:00:00</PII>...1970bixio.gourlaouen
+Output: private_date
+
+Input: 1987-02-24T00:00:00,<PII>1987KSE</PII>,busuxscsix1023@outlook.com,K289PKKWX6I5
+Output: private_person
+
+Input: 1987KSE,busuxscsix1023@outlook.com,<PII>K289PKKWX6I5</PII>,0006 23.444 8001,B_0r
+Output: account_number
+
+Input: K289PKKWX6I5,<PII>0006 23.444 8001</PII>,B_0r,Karaman,Sylka
+Output: private_phone
+
+Input: 0006 23.444 8001,<PII>B_0r</PII>,Karaman,Sylka,Ezavi
+Output: secret
+
+Input: B_0r,<PII>Karaman</PII>,Sylka,Ezavi
+Output: private_person
+
+Input: 084.910-0987, Nederland, <PII>770</PII>, Tiendweg, Lopik, UT, 3411
+Output: private_address
+
+Input: Lopik, UT, <PII>3411</PII>, Kamenova
+Output: private_address
+
+Input: UT, 3411, <PII>Kamenova</PII>\n- id(2) - +26.82 907.1047
+Output: private_person
+
+Input: **Candidat Henri**\n- Écuyer\n- <PII>Q0121990</PII>\n**Candidat Isabelle**
+Output: account_number
+
+Input: **Candidat Henri**\n- <PII>Écuyer</PII>\n- Q0121990
+Output: private_person
+
+Input: Wachtwoord: <PII>4821</PII>
+Output: secret
+
+Input: Passnummer: <PII>Q30J2786Y</PII>, Land: Deutschland
+Output: account_number
+
+Input: Geslacht: <PII>Vrouw</PII>
+Output: other_pii

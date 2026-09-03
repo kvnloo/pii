@@ -1,0 +1,38 @@
+Reproduce the AI4Privacy PII annotations in the input. Return ONLY a valid JSON array of exact substrings copied from the input, or [] when none are annotated. Return every annotated value through the final character of the input, including dense and repeated records. Never return a representative subset. Use one array item per field; never merge adjacent fields. Every returned string must occur literally in the input: preserve spelling, accents, punctuation, brackets, and capitalization, and never translate or normalize it.
+
+The annotation fields are BOD/birth date, DATE, TIME, BUILDING, STREET, CITY, STATE/province, POSTCODE, COUNTRY, SECADDRESS/apartment, GEOCOORD, GIVENNAME, LASTNAME, full personal name, TITLE, SEX/gender, USERNAME, EMAIL, TEL/fax, IP, IDCARD, PASSPORT, DRIVERLICENSE, SOCIALNUMBER, PASS/password/PIN/secret/token, bank/card/account ID, and card issuer.
+
+Use the record structure rather than subjective sensitivity. Field names and surrounding prose may be English, Dutch, French, German, Italian, or Spanish. Inputs may be prose, JSON, XML, HTML, Markdown, YAML, tables, fragments, or delimiter-only records. Short ordinary values such as M, F, H, GB, NL, IT, ENG, 13, 163, Dr, Mme, or a three-letter ID are annotations when their field or repeating column identifies them.
+
+Rules:
+- Scan to the end. In repeated records, infer the column pattern from the first complete record and extract every corresponding value from later records.
+- Separators such as ..., &, commas, pipes, colons, newlines, and visible backslash+n often divide fields. Split values at those separators unless punctuation belongs inside the value, such as an email, IPv6 address, password, coordinate pair, or formatted identifier.
+- Extract every email, telephone/fax number, IPv4/IPv6 address, credential, social number, personal ID, passport, driver's license, and username in dense machine-generated sequences.
+- Extract dates and times in labeled fields, schedules, appointments, deadlines, signatures, and phrases such as "Fait le", "a partire dalla data", or "from the date". Preserve localized month spelling. A bare hour such as 2, 3h, 4h, or 5 can be TIME when it occupies a recurring time field.
+- Extract every component of an address record separately, including short countries, building numbers, streets, cities, states, postcodes, secondary addresses, and surnames. A repeated unlabeled row may encode telephone, country, building, street, city, state, postcode, secondary address, surname in that order.
+- Extract uncommon personal titles when they occupy a title field or a title-and-ID list, including Écuyer, Duchesse, Général, Prince, Dame, Baron, Sœur, Abbé, Infant, Meneer, and Mevrouw. Do not mistake a nearby "Candidat Name" heading for an annotated name when only its following title and ID are fields.
+- Extract sex/gender field values including single letters and localized words. Extract passwords with all punctuation that belongs to the value, including a leading quote if the source value begins with one.
+- Bracketed personal values are annotations, but generic template placeholders containing underscores such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY] are not.
+- Do not output institutions, organizations, project/course/activity names, ordinary prose, generic participant labels, or grammatical perspective descriptions such as "Perspective du Troisième Personne Pluriel" or "Tercera Persona Singular".
+- A complete value at a chunk boundary is valid. Ignore only a visibly severed fragment that cannot be identified. Do not guess missing characters.
+
+Input: tfjasta87868@gmail.com...2.49.03.19524.337.91...B@tutanota.com...278-32-5098...[46.63, -0.7]
+Output: ["tfjasta87868@gmail.com","2.49.03.19524.337.91","B@tutanota.com","278-32-5098","[46.63, -0.7]"]
+
+Input: - id(1) - 084.910-0987, Nederland, 770, Tiendweg, Lopik, UT, 3411, Kamenova\n- id(2) - +26.82 907.1047, NL, 414, Bruininxdeelse Kade, Leerdam, ZH, 4143 LM, Section 740, Krane
+Output: ["084.910-0987","Nederland","770","Tiendweg","Lopik","UT","3411","Kamenova","+26.82 907.1047","NL","414","Bruininxdeelse Kade","Leerdam","ZH","4143 LM","Section 740","Krane"]
+
+Input: **Candidat Henri**\n- Écuyer\n- Q0121990\n**Candidat Isabelle**\n- Duchesse\n- T1904358317741
+Output: ["Écuyer","Q0121990","Duchesse","T1904358317741"]
+
+Input: Date: 2023-12-17T00:00:00\nHeure: 6:24\nBâtiment: 75\nParticipants: Perspective du Troisième Personne Pluriel Ensemble II
+Output: ["2023-12-17T00:00:00","6:24","75"]
+
+Input: Fait le septembre 28, 2026. Mot de passe : "t50C\nHeure de connexion : 5
+Output: ["septembre 28, 2026","\"t50C","5"]
+
+Input: Date: [CURRENT_DATE]; Title: [Madame]; Born: [juin/47]; ID: [5716022019873]; School: [UNIVERSITY_NAME]
+Output: ["Madame","juin/47","5716022019873"]
+
+Input: The university reviewed a strategic plan for virtual reality integration and invited generic participant groups.
+Output: []

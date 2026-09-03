@@ -1,0 +1,57 @@
+Extract every AI4Privacy-style PII value from the input and assign its canonical nine-way type. Return ONLY a valid compact JSON array of [text,type] pairs, or [] when there is no PII. In every pair, text must be an exact substring copied from the input and type must be exactly one of private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, or other_pii. Return one pair per annotated field. Never combine adjacent fields, include a field name or separator in text, translate text, normalize formatting, repair punctuation, invent text, use another label, or add explanation.
+
+Type mapping:
+- private_person: given name, surname, full personal name, personal title, or username.
+- private_email: email address.
+- private_phone: telephone or fax number.
+- private_address: building number, street, city, state/province, postcode, country, apartment/secondary address, or geographic coordinates.
+- private_url: personal/private URL or any IPv4/IPv6 address.
+- private_date: birth date, other annotated personal date, or time.
+- account_number: ID card, passport, driver's license, social number, bank/card/customer/order/account identifier.
+- secret: password, PIN, passcode, API key, authentication token, or secret.
+- other_pii: sex/gender value or PII not covered above.
+
+Follow the annotated field or repeating record schema, not a subjective sensitivity judgment or the visual shape alone. A username is private_person; a title is private_person; an IP address is private_url; a social number, passport, driver's license, or ID card is account_number; a password or PIN is secret; a time is private_date; a building, postcode, country, or coordinate is private_address; and a sex/gender value is other_pii. Labels may be English, Dutch, French, German, Italian, or Spanish. Inputs may be prose, JSON, XML, HTML, Markdown, YAML, forms, tables, messages, fragments, or dense delimiter-separated records. Extract short values such as M, F, H, GB, NL, ENG, 13, 163, Dr, Ms, or a three-letter identifier when their field identifies a listed PII type.
+
+Rules:
+- Scan through the final character and return every PII field. In repeated records, infer the columns from the header or a complete record and apply exactly those columns and types to every later record.
+- In CSV or tables, do not return the row number from a generic ID or index column. An ID is account_number only when its field means ID card, passport, driver's license, social number, bank/card/account/customer/order identifier, or another personal account identifier.
+- Never return values from comment, note, agreement, waiver, admission status, description, usage, monitoring, security, restriction, perspective, grammatical person, project, course, program, activity, or ordinary location fields unless the value itself occupies an explicitly listed PII field.
+- Generic role words such as candidate, participant, student, member, user, client, customer, support, instructor, and trainee are not part of a personal name. If a personal name follows such a role, return only the name as private_person.
+- Separators such as ..., ampersand, comma, pipe, colon, semicolon, newline, and visible backslash+n can divide fields. Split neighboring fields and preserve every character inside each text value.
+- Extract a date or time when it fills a DATE, TIME, BOD, birth-date, appointment, deadline, signature-date, or equivalent personal field. Do not extract an administrative period merely because its key contains Start Date or End Date.
+- Usernames may be random letters/digits, dotted names, initials, bracketed values, or identifiers before a colon in a participant or message list. Do not include surrounding brackets in text.
+- Bracketed personal values are PII, except generic underscore placeholders such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY].
+- Split every annotated address component into a separate private_address pair. A repeating unlabeled address row may use telephone, country, building, street, city, state, postcode, secondary address, and surname as separate columns with private_phone, private_address, and private_person types.
+- When a name is followed by an ID in parentheses, separate them. Return the name only if it is an annotated personal-name field; return the parenthesized ID as account_number when it is a listed personal identifier.
+- A complete value at the start or end of a chunk is valid. Ignore only a visibly severed fragment that cannot be identified.
+
+Input: ID,SOCIALNUMBER,TEL,COMMENTS\n1,777 064 4987,007.200-193-8263,"Plan and implement engaging course content."\n2,710.076.3818,099 3802-9499,"Integrate multimedia into the course."
+Output: [["777 064 4987","account_number"],["007.200-193-8263","private_phone"],["710.076.3818","account_number"],["099 3802-9499","private_phone"]]
+
+Input: ID,TITLE,IDCARD,DRIVERLICENSE,AGREEMENT\n1,"Baron","CUL","KQ84LLYHL6","Property damage liability waiver is granted."\n2,"Prinses","98118263685763","077780822","Final waiver documented and signed off."
+Output: [["Baron","private_person"],["CUL","account_number"],["KQ84LLYHL6","account_number"],["Prinses","private_person"],["98118263685763","account_number"],["077780822","account_number"]]
+
+Input: {"Schedule_A":{"Time":"20:19","Usage":"Available for basketball training","Monitoring":"Supervised by coaches","Security":"Key provided to club personnel"},"Schedule_B":{"Time":"6:01","Restrictions":"No outdoor shoes"}}
+Output: [["20:19","private_date"],["6:01","private_date"]]
+
+Input: nolwen.pedetti2003 participó desde una perspectiva Formal en Tercera Persona Singular. H ofreció su opinión desde la Tercera Persona Singular, Set II. gejpgb21 se unió a la conversación.
+Output: [["nolwen.pedetti2003","private_person"],["H","private_person"],["gejpgb21","private_person"]]
+
+Input: **Candidat Étienne**\n- Autre\n- Huissier\n- mathe.vuketic1998\n- Z0603982423869\n- +33 63.728-6394
+Output: [["Étienne","private_person"],["Autre","other_pii"],["Huissier","private_person"],["mathe.vuketic1998","private_person"],["Z0603982423869","account_number"],["+33 63.728-6394","private_phone"]]
+
+Input: Femme&18 mars 1941&sgummala@gmail.com&IWM&00817 090 768.6978&NL&353&Melis Stokelaan&Den Haag&ZH&2533 EL&Pod 9&8:17
+Output: [["Femme","other_pii"],["18 mars 1941","private_date"],["sgummala@gmail.com","private_email"],["IWM","account_number"],["00817 090 768.6978","private_phone"],["NL","private_address"],["353","private_address"],["Melis Stokelaan","private_address"],["Den Haag","private_address"],["ZH","private_address"],["2533 EL","private_address"],["Pod 9","private_address"],["8:17","private_date"]]
+
+Input: 2-60-03-76248-281-75,67.176.53.168...2.53.06.25467.868.33,126.207.172.140...[47.4, -1.59551]...00:08:32
+Output: [["2-60-03-76248-281-75","account_number"],["67.176.53.168","private_url"],["2.53.06.25467.868.33","account_number"],["126.207.172.140","private_url"],["[47.4, -1.59551]","private_address"],["00:08:32","private_date"]]
+
+Input: - id(1) - 084.910-0987, Nederland, 770, Tiendweg, Lopik, UT, 3411, Kamenova\n- id(2) - +26.82 907.1047, NL, 414, Bruininxdeelse Kade, Leerdam, ZH, 4143 LM, Section 740, Krane
+Output: [["084.910-0987","private_phone"],["Nederland","private_address"],["770","private_address"],["Tiendweg","private_address"],["Lopik","private_address"],["UT","private_address"],["3411","private_address"],["Kamenova","private_person"],["+26.82 907.1047","private_phone"],["NL","private_address"],["414","private_address"],["Bruininxdeelse Kade","private_address"],["Leerdam","private_address"],["ZH","private_address"],["4143 LM","private_address"],["Section 740","private_address"],["Krane","private_person"]]
+
+Input: Password: d.20GBm!3!; PIN: 4821; Passport: P88W6668O; IP: 213.36.161.135; Sex: F
+Output: [["d.20GBm!3!","secret"],["4821","secret"],["P88W6668O","account_number"],["213.36.161.135","private_url"],["F","other_pii"]]
+
+Input: Strategic_Plan: Piano Strategico per l'Attrazione degli Studenti. Activity_Name: Virtual Reality Integration in Educational Curriculum. Policy: Property damage liability waiver is granted. Participants: Tercera Persona Singular, Set I.
+Output: []

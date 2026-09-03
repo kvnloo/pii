@@ -11,6 +11,28 @@
     "compiler_snapshot": "paw-4b-qwen3-0.6b-20260407",
     "program_id": "d71e2fb30e99b0edd992"
   },
+  "optimized_untyped": {
+    "compiler": "paw-4b-qwen3-0.6b",
+    "compiler_snapshot": "paw-4b-qwen3-0.6b-20260407",
+    "program_id": "926a5dde263a01ee3aba",
+    "public": true,
+    "spec": {
+      "path": "specs/pii-detector-v3.txt",
+      "sha256": "5d79d565fc462be15c82bffebfe00ef34480690df52498564cac8fd34f1a0be1",
+      "utf8_bytes": 3367
+    }
+  },
+  "one_pass_typed": {
+    "compiler": "paw-4b-qwen3-0.6b",
+    "compiler_snapshot": "paw-4b-qwen3-0.6b-20260407",
+    "program_id": "a24c81954a02a4278090",
+    "public": true,
+    "spec": {
+      "path": "specs/pii-detector-typed-v7.txt",
+      "sha256": "e7df315d3e5e0c4bf9a75ab10787326c6a41a0cd99a202a3a1c8b2b2ade34974",
+      "utf8_bytes": 5315
+    }
+  },
   "finetuned_standard": {
     "adapter_bytes": 22735040,
     "base_program_id": "d71e2fb30e99b0edd992",
@@ -28,6 +50,37 @@
     "compiler": "paw-4b-qwen3-0.6b",
     "compiler_snapshot": "paw-4b-qwen3-0.6b-20260407",
     "program_id": "a2451b2cf887000e94a4"
+  },
+  "finetuned_optimized_untyped": {
+    "compiler": "paw-ft-bs48",
+    "compiler_snapshot": "paw-ft-bs48-20260530",
+    "program_id": "b263201af3d35848fbb3",
+    "public": true,
+    "spec": {
+      "path": "specs/pii-detector-ft-v1.txt",
+      "sha256": "3acfa184dd9cb26d10b55e6a0f3918c29f90518f8dca9da0b2a5bb163b01bdd3"
+    }
+  },
+  "finetuned_type_classifier": {
+    "compiler": "paw-ft-bs48",
+    "compiler_snapshot": "paw-ft-bs48-20260530",
+    "context_characters": 48,
+    "program_id": "2ebae87e0748d1a62a4b",
+    "public": true,
+    "spec": {
+      "path": "specs/pii-type-classifier-ft-v2.txt",
+      "sha256": "f505e824aba4cf2efa6edd618a8c2857d1ad68d17bba8c57981d4692365c0e3d"
+    }
+  },
+  "finetuned_one_pass_typed": {
+    "compiler": "paw-ft-bs48",
+    "compiler_snapshot": "paw-ft-bs48-20260530",
+    "program_id": "73a0e38b8bbe3427cd1d",
+    "public": true,
+    "spec": {
+      "path": "specs/pii-detector-typed-ft-v1.txt",
+      "sha256": "376fae3801e2e23543ae11922fc70baf4e2906a8349658cdf681477fd3fd04e4"
+    }
   },
   "shared_runtime": {
     "bytes": 622733120,

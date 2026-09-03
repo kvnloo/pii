@@ -22,4 +22,8 @@ def test_ai4privacy_labels_map_to_canonical_types() -> None:
     assert canonical_pii_type("PASS") == "secret"
     assert canonical_pii_type("USERNAME") == "private_person"
     assert canonical_pii_type("IP") == "private_url"
+    assert canonical_pii_type("DRIVERLICENSE_A") == "account_number"
+    assert canonical_pii_type("DATE_BG") == "private_date"
+    assert canonical_pii_type("private_account_number") == "account_number"
+    assert canonical_pii_type("private_document") == "account_number"
     assert canonical_pii_type("nonsense") is None

@@ -28,6 +28,12 @@ Output: ["20amara","Minister","augustus/39"]
 Input: País: US; Dirección: 927, Calle: Shaft Road, Ciudad: Wawarsing, Estado: NY, Código Postal: 12446; Nombre: Úrsula (00477097062)
 Output: ["US","927","Shaft Road","Wawarsing","NY","12446","00477097062"]
 
+Input: tfjasta87868@gmail.com...2.49.03.19524.337.91...B@tutanota.com...278-32-5098...[46.63, -0.7]
+Output: ["tfjasta87868@gmail.com","2.49.03.19524.337.91","B@tutanota.com","278-32-5098","[46.63, -0.7]"]
+
+Input: Date: 2023-12-17T00:00:00\nHeure: 6:24\nBâtiment: 75\nParticipants: Perspective du Troisième Personne Pluriel Ensemble II
+Output: ["2023-12-17T00:00:00","6:24","75"]
+
 Input: Date: [CURRENT_DATE]; Title: [Madame]; Born: [juin/47]; ID: [5716022019873]; School: [UNIVERSITY_NAME]
 Output: ["Madame","juin/47","5716022019873"]
 

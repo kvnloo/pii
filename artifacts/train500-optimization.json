@@ -1,0 +1,152 @@
+{
+  "compiler": {
+    "name": "paw-4b-qwen3-0.6b",
+    "snapshot": "paw-4b-qwen3-0.6b-20260407",
+    "runtime_id": "qwen3-0.6b-q6_k"
+  },
+  "datasets": {
+    "training_development": {
+      "characters": 200901,
+      "documents": 477,
+      "jsonl_sha256": "dc5c2e250478f2276f19326c5a8388cf984d9d026a20da6b4c1038ae96ec790f",
+      "path": "data/cache/train-development-500.jsonl",
+      "source": "ai4privacy/pii-masking-300k train",
+      "source_groups_per_language": 30,
+      "spans": 3363
+    },
+    "held_out_test": {
+      "characters": 72069,
+      "documents": 171,
+      "jsonl_sha256": "5c98e9b10016231eb34c88b53cea1ce4368e3fa3584543068a0ec58d5f5d7f9f",
+      "path": "data/cache/held-out-test.jsonl",
+      "source": "ai4privacy/pii-masking-300k validation",
+      "spans": 1073
+    },
+    "source_revision": "c8c77895a005822682b66ab547fc0422579bc1d3"
+  },
+  "metric": "micro-averaged character F1",
+  "protocol": "Specifications were iterated only on the training-development set. The validation-derived held-out sample was evaluated after each winner was frozen, with no subsequent tuning.",
+  "single_pass_typed": {
+    "candidates_on_training_development": [
+      {
+        "extraction_f1": 0.8585624085054786,
+        "name": "typed-v4-object-baseline",
+        "program_id": "88108e7c09b0d0647261",
+        "typed_f1": 0.6963407813005976
+      },
+      {
+        "extraction_f1": 0.8642423011647978,
+        "name": "typed-v5",
+        "program_id": "09e62d3fc156e8727b2b",
+        "typed_f1": 0.7120199731574618
+      },
+      {
+        "extraction_f1": 0.8268417710737017,
+        "name": "typed-v6",
+        "program_id": "b6d75fb98aed4f9a9a8c",
+        "typed_f1": 0.6261594258816267
+      },
+      {
+        "extraction_f1": 0.8734682326305362,
+        "name": "typed-v7",
+        "program_id": "a24c81954a02a4278090",
+        "typed_f1": 0.7582556797387461
+      },
+      {
+        "extraction_f1": 0.8721991581200909,
+        "name": "typed-v8",
+        "program_id": "70c52fb8c07d1e2b0f91",
+        "typed_f1": 0.7536165128898996
+      },
+      {
+        "extraction_f1": 0.8707005720440751,
+        "name": "typed-v9",
+        "program_id": "0b5d25bf37b5b09025df",
+        "typed_f1": 0.7419513750036223
+      }
+    ],
+    "held_out_test": {
+      "errors": 0,
+      "extraction": {
+        "f1": 0.8505294477990724,
+        "precision": 0.8027587346163376,
+        "recall": 0.9043453987159207
+      },
+      "malformed_outputs_with_partial_recovery": 5,
+      "type_accuracy_on_overlapping_characters": 0.9047227080975409,
+      "typed": {
+        "f1": 0.7668091043865003,
+        "precision": 0.7215065233445475,
+        "recall": 0.8181818181818182
+      }
+    },
+    "output_contract": "[[exact_substring,canonical_type],...]",
+    "paired_typed_f1_gain_over_v5": {
+      "estimate": 0.046235706581284286,
+      "high": 0.06868724852542718,
+      "iterations": 5000,
+      "low": 0.02381241754933383,
+      "seed": 20260902
+    },
+    "parser": "Maps exact substrings to source offsets, canonicalizes documented type aliases for scoring, and recovers complete pairs before a malformed suffix.",
+    "winner": {
+      "program_id": "a24c81954a02a4278090",
+      "public": true,
+      "spec_path": "specs/pii-detector-typed-v7.txt",
+      "spec_sha256": "e7df315d3e5e0c4bf9a75ab10787326c6a41a0cd99a202a3a1c8b2b2ade34974"
+    }
+  },
+  "untyped": {
+    "candidates_on_training_development": [
+      {
+        "f1": 0.8715734629063181,
+        "name": "v2-unwrapped",
+        "program_id": "62ad5f23c25d28feb8d9"
+      },
+      {
+        "f1": 0.8876447762078261,
+        "name": "v3-unwrapped",
+        "program_id": "926a5dde263a01ee3aba"
+      },
+      {
+        "f1": 0.8607848037990503,
+        "name": "v4",
+        "program_id": "3f49aef230cd5137c018"
+      },
+      {
+        "f1": 0.8860996627950543,
+        "name": "v5",
+        "program_id": "1246ff68791dd575c6fb"
+      },
+      {
+        "f1": 0.8662737987307344,
+        "name": "v6",
+        "program_id": "efec3da668a9219b5672"
+      },
+      {
+        "f1": 0.8800094434279644,
+        "name": "v8",
+        "program_id": "b098f2474256dc8387c4"
+      }
+    ],
+    "held_out_test": {
+      "errors": 0,
+      "f1": 0.8831549089578187,
+      "precision": 0.8686886868868688,
+      "recall": 0.8981111007723086
+    },
+    "paired_f1_gain_over_v5": {
+      "estimate": 0.001545113412771859,
+      "high": 0.016468425742623194,
+      "iterations": 5000,
+      "low": -0.013755109056704518,
+      "seed": 20260902
+    },
+    "winner": {
+      "program_id": "926a5dde263a01ee3aba",
+      "public": true,
+      "spec_path": "specs/pii-detector-v3.txt",
+      "spec_sha256": "5d79d565fc462be15c82bffebfe00ef34480690df52498564cac8fd34f1a0be1"
+    }
+  }
+}

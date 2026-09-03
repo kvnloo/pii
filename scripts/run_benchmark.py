@@ -4,12 +4,19 @@ from __future__ import annotations
 import argparse
 import json
 import time
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
 from paw_pii.io import read_documents
-from paw_pii.metrics import diagnostic_breakdown, evaluate_documents, evaluate_typed_documents
+from paw_pii.metrics import (
+    diagnostic_breakdown,
+    evaluate_documents,
+    evaluate_typed_documents,
+    typed_diagnostic_breakdown,
+)
+from paw_pii.paw_api_backend import PawApiDetector
 from paw_pii.paw_backend import PawDetector
 from paw_pii.pplx_backend import PiiTracerDetector
 from paw_pii.predictions import Detector
@@ -19,7 +26,7 @@ from paw_pii.types import Span
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description="Run a local PII benchmark")
     parser.add_argument("--data", type=Path, required=True)
-    parser.add_argument("--backend", choices=("paw", "pplx"), required=True)
+    parser.add_argument("--backend", choices=("paw", "paw-api", "pplx"), required=True)
     parser.add_argument("--model-dir", type=Path)
     parser.add_argument("--program-manifest", type=Path)
     parser.add_argument("--predictions", type=Path)
@@ -27,6 +34,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--max-documents", type=int, default=0)
     parser.add_argument("--progress-every", type=int, default=25)
     parser.add_argument("--paw-max-tokens", type=int, default=768)
+    parser.add_argument("--workers", type=int, default=1)
+    parser.add_argument(
+        "--paw-api-url",
+        default="https://programasweights.com/api/v1/infer",
+    )
+    parser.add_argument("--paw-api-key-env", default="PAW_API_KEY")
     parser.add_argument("--device", default="auto", help="pplx device: auto, cpu, mps, cuda")
     return parser.parse_args()
 
@@ -38,7 +51,20 @@ def build_detector(args: argparse.Namespace) -> Detector:
         return PiiTracerDetector(args.model_dir, device=args.device)
     if args.program_manifest is None:
         raise SystemExit("--program-manifest is required for --backend paw")
+    if args.backend == "paw-api":
+        return PawApiDetector(
+            args.program_manifest,
+            endpoint=args.paw_api_url,
+            api_key_env=args.paw_api_key_env,
+            max_tokens=args.paw_max_tokens,
+        )
     return PawDetector(args.program_manifest, max_tokens=args.paw_max_tokens)
+
+
+def run_detection(detector: Detector, document_id: str, text: str) -> dict[str, Any]:
+    started = time.perf_counter()
+    detection = detector(text)
+    return detection.to_dict(document_id, time.perf_counter() - started)
 
 
 def read_cached_predictions(path: Path) -> dict[str, dict[str, Any]]:
@@ -49,6 +75,10 @@ def read_cached_predictions(path: Path) -> dict[str, dict[str, Any]]:
         for line in handle:
             if line.strip():
                 row = json.loads(line)
+                # Failed API calls are resumable work, not valid cached predictions.
+                # A successful row appended later for the same document wins.
+                if row.get("error"):
+                    continue
                 rows[str(row["id"])] = row
     return rows
 
@@ -73,29 +103,45 @@ def main() -> None:
     cached = read_cached_predictions(predictions_path)
 
     started = time.perf_counter()
-    errors = malformed = unmatched = 0
     with predictions_path.open("a", encoding="utf-8") as handle:
-        for index, document in enumerate(documents, start=1):
-            if document.id not in cached:
-                item_started = time.perf_counter()
-                detection = detector(document.text)
-                row = detection.to_dict(document.id, time.perf_counter() - item_started)
+        missing = [document for document in documents if document.id not in cached]
+        if args.workers > 1:
+            if args.backend != "paw-api":
+                raise SystemExit("--workers greater than 1 is supported only by --backend paw-api")
+            with ThreadPoolExecutor(max_workers=args.workers) as executor:
+                futures = {
+                    executor.submit(run_detection, detector, document.id, document.text): document
+                    for document in missing
+                }
+                for completed, future in enumerate(as_completed(futures), start=1):
+                    row = future.result()
+                    document = futures[future]
+                    handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
+                    handle.flush()
+                    cached[document.id] = row
+                    if completed % args.progress_every == 0 or completed == len(missing):
+                        elapsed = time.perf_counter() - started
+                        print(
+                            f"{completed}/{len(missing)} new documents | {elapsed:.1f}s",
+                            flush=True,
+                        )
+        else:
+            for index, document in enumerate(missing, start=1):
+                row = run_detection(detector, document.id, document.text)
                 handle.write(json.dumps(row, ensure_ascii=False, sort_keys=True) + "\n")
                 handle.flush()
                 cached[document.id] = row
-            row = cached[document.id]
-            errors += bool(row.get("error"))
-            malformed += bool(row.get("malformed"))
-            unmatched += len(row.get("unmatched_values", []))
-            if index % args.progress_every == 0 or index == len(documents):
-                elapsed = time.perf_counter() - started
-                print(
-                    f"{index}/{len(documents)} documents | {elapsed:.1f}s | "
-                    f"errors={errors} malformed={malformed} unmatched={unmatched}",
-                    flush=True,
-                )
+                if index % args.progress_every == 0 or index == len(missing):
+                    elapsed = time.perf_counter() - started
+                    print(
+                        f"{index}/{len(missing)} new documents | {elapsed:.1f}s",
+                        flush=True,
+                    )
 
     ordered_rows = [cached[document.id] for document in documents]
+    errors = sum(bool(row.get("error")) for row in ordered_rows)
+    malformed = sum(bool(row.get("malformed")) for row in ordered_rows)
+    unmatched = sum(len(row.get("unmatched_values", [])) for row in ordered_rows)
     prediction_spans = [spans_from_prediction(row) for row in ordered_rows]
     result = evaluate_documents(documents, prediction_spans)
     typed_result = evaluate_typed_documents(documents, prediction_spans)
@@ -117,6 +163,9 @@ def main() -> None:
             ),
         },
         "diagnostic_breakdown": diagnostic_breakdown(documents, prediction_spans),
+        "typed_diagnostic_breakdown": typed_diagnostic_breakdown(
+            documents, prediction_spans
+        ),
         "diagnostics": {
             "errors": errors,
             "malformed_outputs": malformed,

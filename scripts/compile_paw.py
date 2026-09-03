@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import time
 from dataclasses import asdict, is_dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -20,10 +21,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--manifest", type=Path, required=True)
     parser.add_argument("--name", default="PAW PII detector benchmark")
     parser.add_argument(
+        "--public",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="publish the compiled program (default: public)",
+    )
+    parser.add_argument(
         "--timeout",
         type=float,
-        default=120.0,
-        help="HTTP timeout in seconds; finetune compiles may need 600",
+        default=900.0,
+        help="overall timeout in seconds; finetune compiles may need several minutes",
+    )
+    parser.add_argument(
+        "--async-compile",
+        action=argparse.BooleanOptionalAction,
+        default=None,
+        help="use the async compile queue (default: enabled for paw-ft compilers)",
+    )
+    parser.add_argument("--poll-interval", type=float, default=2.0)
+    parser.add_argument(
+        "--resume-job",
+        help="poll an existing async compile job instead of submitting a duplicate",
     )
     return parser.parse_args()
 
@@ -40,6 +58,109 @@ def json_safe(value: Any) -> Any:
     return str(value)
 
 
+def compile_sync(
+    api_url: str,
+    body: dict[str, Any],
+    headers: dict[str, str],
+    timeout: float,
+) -> dict[str, Any]:
+    response = httpx.post(
+        f"{api_url}/api/v1/compile",
+        json=body,
+        headers=headers,
+        timeout=timeout,
+    )
+    response.raise_for_status()
+    return response.json()
+
+
+def compile_async(
+    api_url: str,
+    body: dict[str, Any],
+    headers: dict[str, str],
+    *,
+    timeout: float,
+    poll_interval: float,
+) -> dict[str, Any]:
+    response = httpx.post(
+        f"{api_url}/api/v1/compile/async",
+        json=body,
+        headers=headers,
+        timeout=min(timeout, 30.0),
+    )
+    response.raise_for_status()
+    submitted = response.json()
+    job_id = submitted.get("job_id")
+    if not isinstance(job_id, str) or not job_id:
+        raise RuntimeError("async compile response did not contain a job_id")
+    print(f"submitted async compile {job_id}", flush=True)
+
+    return poll_async_job(
+        api_url,
+        job_id,
+        headers,
+        timeout=timeout,
+        poll_interval=poll_interval,
+        initial_status=submitted,
+    )
+
+
+def poll_async_job(
+    api_url: str,
+    job_id: str,
+    headers: dict[str, str],
+    *,
+    timeout: float,
+    poll_interval: float,
+    initial_status: dict[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Poll one already-submitted compile without creating another training job."""
+
+    started = time.monotonic()
+    last_reported: tuple[object, object] | None = None
+    status: dict[str, Any] = initial_status or {"job_id": job_id, "status": "submitted"}
+    while time.monotonic() - started < timeout:
+        if last_reported is not None or initial_status is not None:
+            time.sleep(max(0.25, poll_interval))
+        try:
+            poll = httpx.get(
+                f"{api_url}/api/v1/compile/{job_id}",
+                headers=headers,
+                timeout=15.0,
+            )
+            poll.raise_for_status()
+        except httpx.HTTPError:
+            continue
+        status = poll.json()
+        marker = (status.get("status"), status.get("percent"))
+        if marker != last_reported:
+            percent = status.get("percent")
+            progress = f" {100 * percent:.0f}%" if isinstance(percent, (int, float)) else ""
+            queue = status.get("queue_length")
+            queue_text = f" queue={queue}" if queue is not None else ""
+            print(f"compile {status.get('status')}{progress}{queue_text}", flush=True)
+            last_reported = marker
+        if status.get("status") == "ready" and status.get("program_id"):
+            program_id = str(status["program_id"])
+            detail_response = httpx.get(
+                f"{api_url}/api/v1/programs/{program_id}",
+                headers=headers,
+                timeout=30.0,
+            )
+            detail_response.raise_for_status()
+            details = detail_response.json()
+            return {
+                **details,
+                **status,
+                "program_id": program_id,
+                "status": "ready",
+                "job_id": job_id,
+            }
+        if status.get("status") in {"failed", "cancelled"}:
+            raise RuntimeError(f"compile failed: {status.get('error')}")
+    raise TimeoutError(f"compile {job_id} did not finish within {timeout:.0f}s")
+
+
 def main() -> None:
     args = parse_args()
     spec = args.spec.read_text(encoding="utf-8").strip()
@@ -48,32 +169,54 @@ def main() -> None:
         "compiler": args.compiler,
         "name": args.name,
         "tags": ["pii", "privacy", "extraction", "benchmark"],
-        "public": False,
+        "public": args.public,
     }
     headers = {"Content-Type": "application/json"}
     api_key = paw.get_api_key()
     if api_key:
         headers["X-API-Key"] = api_key
-    response = httpx.post(
-        f"{paw.get_api_url()}/api/v1/compile",
-        json=body,
-        headers=headers,
-        timeout=args.timeout,
+    api_url = paw.get_api_url()
+    use_async = (
+        args.async_compile if args.async_compile is not None else args.compiler.startswith("paw-ft")
     )
-    response.raise_for_status()
-    program = response.json()
+    if use_async:
+        if args.resume_job:
+            print(f"resuming async compile {args.resume_job}", flush=True)
+            program = poll_async_job(
+                api_url,
+                args.resume_job,
+                headers,
+                timeout=args.timeout,
+                poll_interval=args.poll_interval,
+            )
+        else:
+            program = compile_async(
+                api_url,
+                body,
+                headers,
+                timeout=args.timeout,
+                poll_interval=args.poll_interval,
+            )
+    else:
+        if args.resume_job:
+            raise ValueError("--resume-job requires async compilation")
+        program = compile_sync(api_url, body, headers, args.timeout)
     if program.get("status") != "ready":
         raise RuntimeError(f"compile failed: {program.get('error')}")
 
     manifest = {
         "created_at": datetime.now(UTC).isoformat(),
         "program_id": program["program_id"],
-        "program_slug": program.get("slug"),
+        "program_slug": program.get("slug") or program.get("user_slug"),
+        "job_id": program.get("job_id"),
         "status": program["status"],
+        "public": args.public,
         "compiler": args.compiler,
         "compiler_snapshot": program.get("compiler_snapshot"),
         "compiler_kind": program.get("compiler_kind"),
         "runtime_id": program.get("runtime_id"),
+        "base_program_id": program.get("base_program_id"),
+        "cached": program.get("cached"),
         "timings": json_safe(program.get("timings")),
         "spec_path": str(args.spec),
         "spec_sha256": hashlib.sha256(spec.encode()).hexdigest(),

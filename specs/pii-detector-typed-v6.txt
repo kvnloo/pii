@@ -1,0 +1,48 @@
+Extract every AI4Privacy-style PII value and assign its nine-way type. Return ONLY a valid compact JSON array of [text,type] pairs, or [] when there is no PII. text must be copied exactly from the input. type must be exactly one of private_person, private_email, private_phone, private_address, private_url, private_date, account_number, secret, other_pii. Never copy a source field name such as DRIVERLICENSE_A into type. No objects, explanations, or text outside the array. Never combine separate fields.
+
+Map source fields as follows, ignoring record suffixes such as _A, _B, _BG, or digits:
+- GIVENNAME, LASTNAME, NAME, TITLE, USERNAME -> private_person.
+- EMAIL -> private_email.
+- TEL, PHONE, FAX -> private_phone.
+- BUILDING, STREET, CITY, STATE, POSTCODE, COUNTRY, SECADDRESS, GEOCOORD -> private_address.
+- URL, IP -> private_url.
+- BOD, DATE, TIME -> private_date.
+- IDCARD, PASSPORT, DRIVERLICENSE, SOCIALNUMBER, ACCOUNTNUMBER, BANKACCOUNT, CARDNUMBER, customer/order/account ID -> account_number.
+- PASS, PASSWORD, PIN, PASSCODE, API key, TOKEN, SECRET -> secret.
+- SEX, GENDER -> other_pii.
+
+Use the field meaning, not the value's shape. A username is private_person. An IP address is private_url. Any passport, driver's license, national/social number, identity card, customer ID, or account number is account_number even when random-looking; never call it private_person or secret. A password/PIN/token is secret even when numeric. A sex/gender value is other_pii even when it resembles a name. In German, Pass or Passnummer means passport and is account_number, while Passwort or Kennwort is secret. Italian Codice Fiscale and Carta d'Identità, Dutch rijbewijs and paspoort, French passeport/permis/numéro social, and Spanish pasaporte/DNI/licencia are account_number.
+
+Follow explicit fields and repeated columns. Extract short values such as M, F, H, GB, NL, ENG, 13, 163, Dr, or a three-letter ID when context identifies a PII field. Text may be English, Dutch, French, German, Italian, or Spanish and may be prose, JSON, XML, HTML, Markdown, YAML, a table, CSV, list, fragment, or delimiter-only sequence. In a repeated unlabeled sequence, infer the type pattern from recognizable values and preserve it across every row. Scan to the end and output every value.
+
+Do not extract organizations, universities, course/project/activity names, ordinary topics, generic role descriptions, or generic underscore placeholders such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY]. A complete value at a chunk boundary is valid; ignore only a visibly severed fragment. Never guess, translate, normalize, or alter text.
+
+Input: {"DRIVERLICENSE_A":"AR6ZOGUIQLB","LASTNAME1_A":"Valverde","PASSPORT_B":"U73K2612E","TIME_BG":"3h","DATE_BG":"augustus 6e, 2015"}
+Output: [["AR6ZOGUIQLB","account_number"],["Valverde","private_person"],["U73K2612E","account_number"],["3h","private_date"],["augustus 6e, 2015","private_date"]]
+
+Input: Führerschein: C6.27.SPSVM67.4\nPass: P88W6668O\nPasswort: d.20GBm!3!
+Output: [["C6.27.SPSVM67.4","account_number"],["P88W6668O","account_number"],["d.20GBm!3!","secret"]]
+
+Input: Codice Fiscale: Bor Rot 24 D 56 0 CSO\nCarta d'Identità: UML711382U\nPassword: lx6QKu9}n2]
+Output: [["Bor Rot 24 D 56 0 CSO","account_number"],["UML711382U","account_number"],["lx6QKu9}n2]","secret"]]
+
+Input: 08synar.fogliadini@aol.com, 1 65 12 17708 422 33, leruijter@aol.com, 2-51-03-16321-225-58, 11h, [44.82273, -0.17]
+Output: [["08synar.fogliadini@aol.com","private_email"],["1 65 12 17708 422 33","account_number"],["leruijter@aol.com","private_email"],["2-51-03-16321-225-58","account_number"],["11h","private_date"],["[44.82273, -0.17]","private_address"]]
+
+Input: BOD,USERNAME,EMAIL,DRIVERLICENSE,TEL,PASS,LASTNAME\n1987-02-24T00:00:00,1987KSE,busuxscsix1023@outlook.com,K289PKKWX6I5,0006 23.444 8001,B_0r,Karaman
+Output: [["1987-02-24T00:00:00","private_date"],["1987KSE","private_person"],["busuxscsix1023@outlook.com","private_email"],["K289PKKWX6I5","account_number"],["0006 23.444 8001","private_phone"],["B_0r","secret"],["Karaman","private_person"]]
+
+Input: Name: Vrouw; Email: Vrouw@mail.com; Gender: Vrouw
+Output: [["Vrouw","private_person"],["Vrouw@mail.com","private_email"],["Vrouw","other_pii"]]
+
+Input: Hi, I'm Daniel Whitfield. Email daniels@meridiancap.com or call 415-555-0123.
+Output: [["Daniel Whitfield","private_person"],["daniels@meridiancap.com","private_email"],["415-555-0123","private_phone"]]
+
+Input: País: US; Dirección: 927, Calle: Shaft Road, Ciudad: Wawarsing, Estado: NY, Código Postal: 12446; Nombre: Úrsula (00477097062)
+Output: [["US","private_address"],["927","private_address"],["Shaft Road","private_address"],["Wawarsing","private_address"],["NY","private_address"],["12446","private_address"],["00477097062","account_number"]]
+
+Input: Date: [CURRENT_DATE]; Title: [Madame]; Born: [juin/47]; ID: [5716022019873]; School: [UNIVERSITY_NAME]
+Output: [["Madame","private_person"],["juin/47","private_date"],["5716022019873","account_number"]]
+
+Input: The university reviewed the application and scheduled a general discussion.
+Output: []

@@ -1,0 +1,43 @@
+Extract all AI4Privacy-style PII values from the input. Return ONLY a valid JSON array of exact substrings copied from the input, or [] if there are none. No explanation, labels, or surrounding text. One array item per field: never combine adjacent fields. Every returned item must occur literally in the source; never translate, normalize, correct, or invent text.
+
+PII fields are birth date, date, time, building number, street, city, state/province, postcode, country, secondary address/apartment, geographic coordinates, given name, surname, full personal name, personal title, sex, username, email, telephone/fax, IP address, ID card, passport, driver's license, social number, password/PIN/secret/token, bank/card/account ID, and card issuer.
+
+Follow explicit fields and repeating record structure, not a subjective sensitivity judgment. Extract short ordinary-looking values such as M, F, H, GB, NL, ENG, 13, 163, Dr, Ms, or a three-letter ID when a field or column identifies them. Text and field names may be English, Dutch, French, German, Italian, or Spanish. Inputs may be prose, JSON, XML, HTML, Markdown, YAML, tables, messages, fragments, or dense delimiter-separated records.
+
+Rules:
+- Scan through the final character and return every PII value, not a sample. If records repeat, infer the columns from a complete record and process all later records.
+- The separators ..., &, comma, pipe, colon, newline, and visible backslash+n can divide fields. Split neighboring fields instead of returning them together.
+- Extract dates and times from explicit date/time fields, appointments, deadlines, signatures, and schedules. A bare number or number followed by h can be a time when it fills a time field.
+- Usernames can be random letters/digits, dotted names, initials, bracketed values, or identifiers before a colon in a participant list.
+- Bracketed personal values are PII, except generic underscore placeholders such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY].
+- Split every labeled address component. A repeating unlabeled address row can use telephone, country, building, street, city, state, postcode, secondary address, surname.
+- When a name is followed by an ID in parentheses, separate them. Extract the name only when it is an annotated personal-name field; always extract the parenthesized ID.
+- Do not return institutions, organizations, project/course/activity names, policy or waiver prose, ordinary topics, generic participant or student labels, grammatical perspective descriptions, or arbitrary sentences. A key or heading alone does not make its value PII.
+- A complete value at a chunk boundary remains valid. Ignore only a visibly severed fragment that cannot be identified.
+
+Input: Hi, I'm Daniel Whitfield. Email daniels@meridiancap.com or call 415-555-0123.
+Output: ["Daniel Whitfield","daniels@meridiancap.com","415-555-0123"]
+
+Input: tfjasta87868@gmail.com...2.49.03.19524.337.91...B@tutanota.com...278-32-5098...[46.63, -0.7]
+Output: ["tfjasta87868@gmail.com","2.49.03.19524.337.91","B@tutanota.com","278-32-5098","[46.63, -0.7]"]
+
+Input: - id(1) - 084.910-0987, Nederland, 770, Tiendweg, Lopik, UT, 3411, Kamenova\n- id(2) - +26.82 907.1047, NL, 414, Bruininxdeelse Kade, Leerdam, ZH, 4143 LM, Section 740, Krane
+Output: ["084.910-0987","Nederland","770","Tiendweg","Lopik","UT","3411","Kamenova","+26.82 907.1047","NL","414","Bruininxdeelse Kade","Leerdam","ZH","4143 LM","Section 740","Krane"]
+
+Input: - Meeting at 2:33 PM\n- N23 - Meeting at 11:29pm\n- wennmann27 - Meeting at 4:45 PM
+Output: ["2:33 PM","N23","11:29pm","wennmann27","4:45 PM"]
+
+Input: **Candidat Henri**\n- Écuyer\n- Q0121990\n**Candidat Isabelle**\n- Duchesse\n- T1904358317741
+Output: ["Écuyer","Q0121990","Duchesse","T1904358317741"]
+
+Input: Date: 2023-12-17T00:00:00\nHeure: 6:24\nBâtiment: 75\nParticipants: Perspective du Troisième Personne Pluriel Ensemble II
+Output: ["2023-12-17T00:00:00","6:24","75"]
+
+Input: Date: [CURRENT_DATE]; Title: [Madame]; Born: [juin/47]; ID: [5716022019873]; School: [UNIVERSITY_NAME]
+Output: ["Madame","juin/47","5716022019873"]
+
+Input: Strategic_Plan: Piano Strategico per l'Attrazione degli Studenti. Activity_Name: Virtual Reality Integration in Educational Curriculum. Policy: Property damage liability waiver is granted. Participants: Tercera Persona Singular, Set I.
+Output: []
+
+Input: The university reviewed the application and scheduled a general discussion.
+Output: []

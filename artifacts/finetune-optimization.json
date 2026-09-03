@@ -1,0 +1,339 @@
+{
+  "compiler": {
+    "name": "paw-ft-bs48",
+    "snapshot": "paw-ft-bs48-20260530",
+    "kind": "finetune_lora",
+    "all_successful_compiles_public": true
+  },
+  "datasets": {
+    "development": {
+      "path": "data/cache/train-development-500.jsonl",
+      "source": "ai4privacy/pii-masking-300k train",
+      "source_revision": "c8c77895a005822682b66ab547fc0422579bc1d3",
+      "documents": 477,
+      "characters": 200901,
+      "spans": 3363,
+      "sha256": "dc5c2e250478f2276f19326c5a8388cf984d9d026a20da6b4c1038ae96ec790f"
+    },
+    "held_out": {
+      "path": "data/cache/held-out-test.jsonl",
+      "source": "ai4privacy/pii-masking-300k validation",
+      "source_revision": "c8c77895a005822682b66ab547fc0422579bc1d3",
+      "documents": 171,
+      "characters": 72069,
+      "spans": 1073,
+      "sha256": "5c98e9b10016231eb34c88b53cea1ce4368e3fa3584543068a0ec58d5f5d7f9f"
+    }
+  },
+  "metric": "Micro-averaged character precision, recall, and F1. Typed F1 requires both character coverage and the canonical type to match.",
+  "protocol": "All specification and context-window choices were made on the 477-document training-development set. Each architecture's winner was frozen before its first and only run on the validation-derived held-out set; no tuning followed held-out evaluation. Every successful compile in this search was public.",
+  "pii_tracer_reference": {
+    "summary_path": "results/held-out-test-pplx.summary.json",
+    "precision": 0.885570497483706,
+    "recall": 0.9987903601004932,
+    "f1": 0.9387790799370298,
+    "paw_extraction_f1_gap": -0.028488964167461828
+  },
+  "label_agnostic_extraction": {
+    "candidates": [
+      {
+        "name": "unwrapped-v3",
+        "spec_path": "specs/pii-detector-v3.txt",
+        "program_id": "5c1dd556e6856784df12",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-v3-unwrapped-reparsed.summary.json",
+        "development": {
+          "precision": 0.8792265312736308,
+          "recall": 0.9494313210848644,
+          "f1": 0.9129812950447294,
+          "errors": 0,
+          "malformed_outputs": 2,
+          "unmatched_values": 15
+        }
+      },
+      {
+        "name": "unwrapped-v6",
+        "spec_path": "specs/pii-detector-v6.txt",
+        "program_id": "08bf7c7e6abcbbf52e14",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-v6-reparsed.summary.json",
+        "development": {
+          "precision": 0.8818702290076336,
+          "recall": 0.9433362496354623,
+          "f1": 0.9115682682823728,
+          "errors": 0,
+          "malformed_outputs": 9,
+          "unmatched_values": 19
+        }
+      },
+      {
+        "name": "ft-v1-targeted",
+        "spec_path": "specs/pii-detector-ft-v1.txt",
+        "program_id": "b263201af3d35848fbb3",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v1-reparsed.summary.json",
+        "development": {
+          "precision": 0.9161713286713287,
+          "recall": 0.9169728783902013,
+          "f1": 0.9165719282903366,
+          "errors": 0,
+          "malformed_outputs": 4,
+          "unmatched_values": 23
+        }
+      },
+      {
+        "name": "ft-v2-balanced",
+        "spec_path": "specs/pii-detector-ft-v2.txt",
+        "program_id": "fd5cf07ef9fd59d15b9b",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v2-reparsed.summary.json",
+        "development": {
+          "precision": 0.9034362890357875,
+          "recall": 0.9246719160104987,
+          "f1": 0.9139307641310926,
+          "errors": 0,
+          "malformed_outputs": 4,
+          "unmatched_values": 17
+        }
+      },
+      {
+        "name": "ft-v3-deduplicated-values",
+        "spec_path": "specs/pii-detector-ft-v3.txt",
+        "program_id": "3cd1943e8c75147e28da",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v3-reparsed.summary.json",
+        "development": {
+          "precision": 0.918808359270787,
+          "recall": 0.9039370078740158,
+          "f1": 0.9113120176405732,
+          "errors": 0,
+          "malformed_outputs": 4,
+          "unmatched_values": 279
+        }
+      },
+      {
+        "name": "ft-v4-occurrence-aware",
+        "spec_path": "specs/pii-detector-ft-v4.txt",
+        "program_id": "51c7f878cae07de144bd",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v4.summary.json",
+        "development": {
+          "precision": 0.9348652016656028,
+          "recall": 0.8969962088072324,
+          "f1": 0.9155392835349973,
+          "errors": 0,
+          "malformed_outputs": 2,
+          "unmatched_values": 19
+        }
+      }
+    ],
+    "winner": {
+      "name": "ft-v1-targeted",
+      "spec_path": "specs/pii-detector-ft-v1.txt",
+      "program_id": "b263201af3d35848fbb3",
+      "public": true,
+      "manifest_path": "results/paw-finetuned-extractor-ft-v1-public.json"
+    },
+    "held_out": {
+      "summary_path": "results/held-out-test-paw-finetuned-extractor-ft-v1-final.summary.json",
+      "precision": 0.9025059447594659,
+      "recall": 0.9182097329487299,
+      "f1": 0.910290115769568,
+      "errors": 0,
+      "malformed_outputs": 0,
+      "unmatched_values": 9
+    }
+  },
+  "label_agnostic_then_classify": {
+    "extractor_program_id": "b263201af3d35848fbb3",
+    "extractor_spec_path": "specs/pii-detector-ft-v1.txt",
+    "development_extraction_f1": 0.9165719282903366,
+    "classifier_candidates": [
+      {
+        "name": "classifier-v2-context-24",
+        "spec_path": "specs/pii-type-classifier-v2.txt",
+        "program_id": "5603f8370b2df0e4bd27",
+        "public": true,
+        "context_characters": 24,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v1-reparsed-type-ft-v2-ctx24.summary.json",
+        "development": {
+          "typed_f1": 0.7200629104836244,
+          "type_accuracy_on_overlapping_characters": 0.7862799351206946,
+          "errors": 0,
+          "malformed_outputs": 0
+        }
+      },
+      {
+        "name": "classifier-ft-v1-context-24",
+        "spec_path": "specs/pii-type-classifier-ft-v1.txt",
+        "program_id": "91bf7b6cc82d95b24693",
+        "public": true,
+        "context_characters": 24,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v1-reparsed-type-ft-v1-ctx24.summary.json",
+        "development": {
+          "typed_f1": 0.7806393542580065,
+          "type_accuracy_on_overlapping_characters": 0.855071081003721,
+          "errors": 0,
+          "malformed_outputs": 0
+        }
+      },
+      {
+        "name": "classifier-ft-v2-context-24",
+        "spec_path": "specs/pii-type-classifier-ft-v2.txt",
+        "program_id": "2ebae87e0748d1a62a4b",
+        "public": true,
+        "context_characters": 24,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v1-reparsed-type-ft-v2-targeted-ctx24.summary.json",
+        "development": {
+          "typed_f1": 0.7954294353666337,
+          "type_accuracy_on_overlapping_characters": 0.8700823712750055,
+          "errors": 0,
+          "malformed_outputs": 1
+        }
+      },
+      {
+        "name": "classifier-ft-v2-context-48",
+        "spec_path": "specs/pii-type-classifier-ft-v2.txt",
+        "program_id": "2ebae87e0748d1a62a4b",
+        "public": true,
+        "context_characters": 48,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v1-reparsed-type-ft-v2-targeted-ctx48.summary.json",
+        "development": {
+          "typed_f1": 0.7960073228140528,
+          "type_accuracy_on_overlapping_characters": 0.8711954966129186,
+          "errors": 0,
+          "malformed_outputs": 0
+        }
+      },
+      {
+        "name": "classifier-ft-v2-context-64",
+        "spec_path": "specs/pii-type-classifier-ft-v2.txt",
+        "program_id": "2ebae87e0748d1a62a4b",
+        "public": true,
+        "context_characters": 64,
+        "summary_path": "results/train-development-500-paw-finetuned-extractor-ft-v1-reparsed-type-ft-v2-targeted-ctx64.summary.json",
+        "development": {
+          "typed_f1": 0.7929356745530333,
+          "type_accuracy_on_overlapping_characters": 0.8681741564100117,
+          "errors": 0,
+          "malformed_outputs": 1
+        }
+      }
+    ],
+    "winner": {
+      "extractor_program_id": "b263201af3d35848fbb3",
+      "extractor_spec_path": "specs/pii-detector-ft-v1.txt",
+      "classifier_program_id": "2ebae87e0748d1a62a4b",
+      "classifier_spec_path": "specs/pii-type-classifier-ft-v2.txt",
+      "context_characters": 48,
+      "public": true
+    },
+    "held_out": {
+      "summary_path": "results/held-out-test-paw-finetuned-two-stage-ft-v1-ft-v2-ctx48-final.summary.json",
+      "extraction_precision": 0.9025059447594659,
+      "extraction_recall": 0.9182097329487299,
+      "extraction_f1": 0.910290115769568,
+      "typed_precision": 0.7866715288540432,
+      "typed_recall": 0.8029217456034242,
+      "typed_f1": 0.7947135752440597,
+      "type_accuracy_on_overlapping_characters": 0.8744426428860965,
+      "errors": 0,
+      "malformed_outputs": 2
+    }
+  },
+  "single_program_typed": {
+    "candidates": [
+      {
+        "name": "typed-v7",
+        "spec_path": "specs/pii-detector-typed-v7.txt",
+        "program_id": "ee8e65ca8120ba86d76a",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-typed-v7.summary.json",
+        "development": {
+          "extraction_f1": 0.8778019617265456,
+          "typed_f1": 0.7917351424999648,
+          "type_accuracy_on_overlapping_characters": 0.9075481419462871,
+          "errors": 0,
+          "malformed_outputs": 16,
+          "unmatched_values": 52
+        }
+      },
+      {
+        "name": "typed-ft-v1-targeted",
+        "spec_path": "specs/pii-detector-typed-ft-v1.txt",
+        "program_id": "73a0e38b8bbe3427cd1d",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-typed-ft-v1-live.summary.json",
+        "development": {
+          "extraction_f1": 0.9061444379732091,
+          "typed_f1": 0.8220626140345797,
+          "type_accuracy_on_overlapping_characters": 0.9122023331298005,
+          "errors": 0,
+          "malformed_outputs": 7,
+          "unmatched_values": 27
+        }
+      },
+      {
+        "name": "typed-ft-v3-compact-high-recall",
+        "spec_path": "specs/pii-detector-typed-ft-v3.txt",
+        "program_id": "59d3c0f5e576b07df4a9",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-typed-ft-v3.summary.json",
+        "development": {
+          "extraction_f1": 0.8678874898342634,
+          "typed_f1": 0.82008414834629,
+          "type_accuracy_on_overlapping_characters": 0.9510146051441127,
+          "errors": 0,
+          "malformed_outputs": 7,
+          "unmatched_values": 94
+        }
+      },
+      {
+        "name": "typed-ft-v4-balanced",
+        "spec_path": "specs/pii-detector-typed-ft-v4.txt",
+        "program_id": "796978fe50b4701d96a4",
+        "public": true,
+        "summary_path": "results/train-development-500-paw-finetuned-typed-ft-v4.summary.json",
+        "development": {
+          "extraction_f1": 0.8534734384121425,
+          "typed_f1": 0.7864759984110978,
+          "type_accuracy_on_overlapping_characters": 0.9265965872273022,
+          "errors": 0,
+          "malformed_outputs": 7,
+          "unmatched_values": 22
+        }
+      }
+    ],
+    "winner": {
+      "name": "typed-ft-v1-targeted",
+      "spec_path": "specs/pii-detector-typed-ft-v1.txt",
+      "program_id": "73a0e38b8bbe3427cd1d",
+      "public": true,
+      "manifest_path": "results/paw-finetuned-typed-ft-v1-public.json"
+    },
+    "held_out": {
+      "summary_path": "results/held-out-test-paw-finetuned-typed-ft-v1-final.summary.json",
+      "extraction_precision": 0.8535208821741773,
+      "extraction_recall": 0.9146738624732483,
+      "extraction_f1": 0.8830398850161695,
+      "typed_precision": 0.8065296251511487,
+      "typed_recall": 0.8688936447380664,
+      "typed_f1": 0.8365509518477043,
+      "type_accuracy_on_overlapping_characters": 0.9499491353001017,
+      "errors": 0,
+      "malformed_outputs": 1,
+      "unmatched_values": 6
+    }
+  },
+  "compile_failures": [
+    {
+      "name": "typed-ft-v2-oversized",
+      "spec_path": "specs/pii-detector-typed-ft-v2.txt",
+      "spec_characters": 14524,
+      "job_id": "bb48be04465c40f489db67d2af67b01c",
+      "public_requested": true,
+      "progress_percent": 0,
+      "error": "HTTP 422 Unprocessable Entity from the finetune compile provider; no program was produced"
+    }
+  ]
+}

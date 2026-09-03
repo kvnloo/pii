@@ -1,0 +1,45 @@
+Extract every AI4Privacy-style PII value from the input. Return ONLY a valid compact JSON array of exact substrings copied from the input, or [] when there is no PII. Return one array item per PII field. Never combine adjacent fields, include a field name or separator, translate text, normalize formatting, repair punctuation, invent text, or add explanation.
+
+The PII field types are birth date, date, time, building number, street, city, state/province, postcode, country, apartment/secondary address, geographic coordinates, given name, surname, full personal name, personal title, sex/gender, username, email, telephone/fax, IP address, ID card, passport, driver's license, social number, password/PIN/passcode/secret/token, bank/card/account ID, and card issuer.
+
+Follow the field or repeating record schema rather than a subjective sensitivity judgment. PII labels may be English, Dutch, French, German, Italian, or Spanish and may appear in prose, JSON, XML, HTML, Markdown, YAML, forms, tables, messages, fragments, or dense delimiter-separated records. Extract short ordinary-looking values such as M, F, H, GB, NL, ENG, 13, 163, Dr, Ms, or a three-letter identifier when their field or recurring column identifies a listed PII type.
+
+Rules:
+- Scan through the final character and return every PII value. In repeated records, infer the columns from the header or a complete record and apply those PII columns to every later record.
+- In CSV or tables, do not return the row number from a generic ID or index column. An ID is PII when its field means ID card, passport, driver's license, social number, bank/card/account/customer/order identifier, or another personal account identifier.
+- Never return values from comment, note, agreement, waiver, admission status, description, usage, monitoring, security, restriction, perspective, grammatical person, project, course, program, or activity fields. Do not return institutions, organizations, medical conditions, ordinary topics, or arbitrary prose.
+- Generic role words such as candidate, participant, student, member, user, client, customer, support, instructor, and trainee are not part of a personal name. If a personal name follows such a role, return only the name.
+- Separators such as ..., ampersand, comma, pipe, colon, semicolon, newline, and visible backslash+n can divide fields. Split neighboring fields and preserve every character inside each value.
+- Extract dates and times from date/time fields, schedules, appointments, deadlines, signatures, or phrases like "from the date ..." in any of the six languages. A bare number or number followed by h can be a time when it fills a recurring time column.
+- Usernames may be random letters/digits, dotted names, initials, bracketed values, or identifiers before a colon in a participant or message list. Do not return surrounding brackets.
+- Bracketed personal values are PII, except generic underscore placeholders such as [CURRENT_DATE], [UNIVERSITY_NAME], [YOUR_NAME], and [FIELD_OF_STUDY].
+- Split every address component. A repeating unlabeled address row may use telephone, country, building, street, city, state, postcode, secondary address, and surname as separate columns.
+- When a name is followed by an ID in parentheses, separate them. Return the name only if it is a personal-name field; return the parenthesized ID when it is a listed personal identifier.
+- A complete value at the start or end of a chunk is valid. Ignore only a visibly severed fragment that cannot be identified.
+
+Input: ID,SOCIALNUMBER,TEL,COMMENTS\n1,777 064 4987,007.200-193-8263,"Plan and implement engaging course content."\n2,710.076.3818,099 3802-9499,"Integrate multimedia into the course."
+Output: ["777 064 4987","007.200-193-8263","710.076.3818","099 3802-9499"]
+
+Input: ID,TITLE,IDCARD,DRIVERLICENSE,AGREEMENT\n1,"Baron","CUL","KQ84LLYHL6","Property damage liability waiver is granted."\n2,"Prinses","98118263685763","077780822","Final waiver documented and signed off."
+Output: ["Baron","CUL","KQ84LLYHL6","Prinses","98118263685763","077780822"]
+
+Input: {"Schedule_A":{"Time":"20:19","Usage":"Available for basketball training","Monitoring":"Supervised by coaches","Security":"Key provided to club personnel"},"Schedule_B":{"Time":"6:01","Restrictions":"No outdoor shoes"}}
+Output: ["20:19","6:01"]
+
+Input: nolwen.pedetti2003 participó desde una perspectiva Formal en Tercera Persona Singular. H ofreció su opinión desde la Tercera Persona Singular, Set II. gejpgb21 se unió a la conversación.
+Output: ["nolwen.pedetti2003","H","gejpgb21"]
+
+Input: Date: 2023-12-17T00:00:00\nHeure: 6:24\nBâtiment: 75\nParticipants: Perspective du Troisième Personne Pluriel Ensemble II
+Output: ["2023-12-17T00:00:00","6:24","75"]
+
+Input: País: US; Dirección: 927, Calle: Shaft Road, Ciudad: Wawarsing, Estado: NY, Código Postal: 12446; Nombre: Úrsula (00477097062)
+Output: ["US","927","Shaft Road","Wawarsing","NY","12446","00477097062"]
+
+Input: tfjasta87868@gmail.com...2 57 01 85136 028 30...B@tutanota.com...2.49.03.19524.337.91...16zedije.pushparajan@protonmail.com...281026534565850...278-32-5098...[46.63, -0.7]
+Output: ["tfjasta87868@gmail.com","2 57 01 85136 028 30","B@tutanota.com","2.49.03.19524.337.91","16zedije.pushparajan@protonmail.com","281026534565850","278-32-5098","[46.63, -0.7]"]
+
+Input: Date: [CURRENT_DATE]; Title: [Madame]; Born: [juin/47]; ID: [5716022019873]; School: [UNIVERSITY_NAME]
+Output: ["Madame","juin/47","5716022019873"]
+
+Input: Strategic_Plan: Piano Strategico per l'Attrazione degli Studenti. Activity_Name: Virtual Reality Integration in Educational Curriculum. Policy: Property damage liability waiver is granted. Participants: Tercera Persona Singular, Set I.
+Output: []
