@@ -1,0 +1,14 @@
+name: paw-pii
+version: 0.1.0
+manifest_version: 1
+kind: standalone
+description: "Local ProgramAsWeights PII detection and redaction. Strips names, emails, phones, secrets and other PII from LLM requests and tool results before they leave the machine."
+author: "kvnloo (integration) / programasweights (model)"
+license: MIT
+homepage: https://github.com/kvnloo/pii
+provides_tools:
+  - detect_pii
+  - redact_pii
+provides_hooks: []
+# Middleware kinds are registered at runtime via ctx.register_middleware.
+# Supported: llm_request (auto-redact provider kwargs), tool_execution (redact tool results).

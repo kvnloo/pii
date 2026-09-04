@@ -1,0 +1,11 @@
+{
+  "mcpServers": {
+    "paw-pii": {
+      "command": "python3",
+      "args": ["-m", "paw_pii.mcp_server"],
+      "env": {
+        "PAW_PII_PLACEHOLDER": "[PII]"
+      }
+    }
+  }
+}

@@ -25,6 +25,10 @@ dev = [
   "ruff>=0.12",
 ]
 
+[project.scripts]
+paw-pii = "paw_pii.cli:main"
+paw-pii-mcp = "paw_pii.mcp_server:main"
+
 [tool.hatch.build.targets.wheel]
 packages = ["src/paw_pii"]
 

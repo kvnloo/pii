@@ -1,0 +1,53 @@
+{
+  "name": "omp-paw-pii",
+  "version": "0.1.0",
+  "description": "Local ProgramAsWeights PII redaction for Oh My Pi — strips PII before provider egress and from tool results",
+  "license": "MIT",
+  "homepage": "https://github.com/kvnloo/pii",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/kvnloo/pii.git",
+    "directory": "integrations/omp"
+  },
+  "type": "module",
+  "omp": {
+    "extensions": ["./src/index.ts"],
+    "settings": {
+      "enabled": {
+        "type": "boolean",
+        "default": true,
+        "description": "Master switch for automatic PII redaction"
+      },
+      "autoContext": {
+        "type": "boolean",
+        "default": true,
+        "description": "Redact AgentMessage[] on the context event"
+      },
+      "autoProvider": {
+        "type": "boolean",
+        "default": true,
+        "description": "Redact provider request payload on before_provider_request"
+      },
+      "autoToolResult": {
+        "type": "boolean",
+        "default": true,
+        "description": "Redact tool_result content"
+      },
+      "placeholder": {
+        "type": "string",
+        "default": "[PII]",
+        "description": "Replacement token for detected spans"
+      },
+      "pythonPath": {
+        "type": "string",
+        "default": "python3",
+        "description": "Python interpreter that can import paw_pii"
+      },
+      "module": {
+        "type": "string",
+        "default": "paw_pii.cli",
+        "description": "Python module for CLI redaction"
+      }
+    }
+  }
+}

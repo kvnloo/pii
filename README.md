@@ -26,6 +26,38 @@ print(json.loads(detect_pii(text)))
 
 The program downloads once and then runs locally. See [`example.py`](example.py) for the complete runnable example.
 
+## Agent harness plugins
+
+This fork adds first-class adapters so coding agents can scrub PII **on-device** before provider egress:
+
+| Harness | Path | Install |
+|---------|------|---------|
+| **Oh My Pi (omp)** | [`integrations/omp`](integrations/omp) | `omp plugin link ./integrations/omp` |
+| **Hermes Agent** | [`integrations/hermes`](integrations/hermes) | `ln -s $(pwd)/integrations/hermes ~/.hermes/plugins/paw-pii && hermes plugins enable paw-pii` |
+| **o8** | [`integrations/o8`](integrations/o8) | Settings → MCP → stdio `python -m paw_pii.mcp_server` (+ worker injection) |
+| **Any MCP host** | `python -m paw_pii.mcp_server` | tools: `detect_pii`, `redact_pii` |
+
+Shared library API:
+
+```python
+from paw_pii import get_service
+
+service = get_service()
+print(service.redact("Email ada@example.com PIN 4821"))
+# Email [PII] PIN [PII]
+```
+
+CLI:
+
+```bash
+pip install -e .
+python -m paw_pii.cli redact --text "Name: Ada Lovelace"
+python -m paw_pii.mcp_server   # stdio MCP
+```
+
+Hermes uses `llm_request` + `tool_execution` middleware for automatic scrubbing. OMP uses `context`, `before_provider_request`, and `tool_result` extension events. o8 attaches the MCP server on the tool-spine (orchestrator + optional worker injection); automatic pre-LLM middleware in o8 core is a separate upstream design discussion.
+
+
 ## Output
 
 The function returns a JSON array of `[text, type]` pairs. Each `text` is copied exactly from the input, and each `type` is one of:
